@@ -1,6 +1,6 @@
 import os
 import sys
-
+import random
 import pygame
 
 
@@ -10,9 +10,9 @@ size = width, height = 1024, 600
 screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('blue'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
-all_allies = pygame.sprite.Group()
+all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
-all_objects = pygame.sprite.Group()
+horizontal_borders = pygame.sprite.Group()
 
 
 def load_image(name, colorkey=None):
@@ -31,6 +31,47 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Border(pygame.sprite.Sprite):
+    # строго вертикальный отрезок
+    def __init__(self, x1, y1, x2):
+        super().__init__(all_sprites)
+        self.add(horizontal_borders)
+        self.image = pygame.Surface([x2 - x1, 1])
+        self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+
+
+class Particle(pygame.sprite.Sprite):
+    # сгенерируем частицы разного размера
+    fire = [load_image("particle.png")]
+    for scale in (1, 2, 3):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy, rect):
+        super().__init__(all_sprites)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+        self.screen_rect = rect
+
+        # у каждой частицы своя скорость — это вектор
+        self.velocity = [dx, dy]
+        # и свои координаты
+        self.rect.x, self.rect.y = pos
+
+        # гравитация будет одинаковой (значение константы)
+        self.gravity = -4
+
+    def update(self):
+        # применяем гравитационный эффект:
+        # движение с ускорением под действием гравитации
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(self.screen_rect):
+            self.kill()
+
+
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -38,9 +79,10 @@ class Spider(pygame.sprite.Sprite):
     images_movement_left = [pygame.transform.flip(i, True, False) for i in images_movement_right]
 
     def __init__(self):
-        super().__init__(all_allies)
+        super().__init__(all_sprites)
         self.current = 1
         self.wait = 10
+        self.x_velocity = 0
         self.y_velocity = 0
         self.drop = False
         self.direction = True
@@ -50,19 +92,21 @@ class Spider(pygame.sprite.Sprite):
         self.rect.x = 50
         self.rect.y = 400
 
+    def respawn(self):
+        pass
+
     def update(self, check):
         if check[pygame.K_d]:
-            self.rect.x += 2
-            self.direction = True
+            self.x_velocity = min(30, self.x_velocity + 1)
+            self.direction = self.x_velocity >= 0
             if self.wait:
                 self.wait -= 1
             else:
                 self.wait = 10
                 self.current = (self.current + 1) % 4
-                print(1)
         elif check[pygame.K_a]:
-            self.rect.x -= 2
-            self.direction = False
+            self.x_velocity = max(-30, self.x_velocity - 1)
+            self.direction = self.x_velocity >= 0
             if self.wait:
                 self.wait -= 1
             else:
@@ -70,36 +114,108 @@ class Spider(pygame.sprite.Sprite):
                 self.current = (self.current + 1) % 4
         else:
             self.current = 1
+            if self.x_velocity:
+                self.x_velocity -= self.x_velocity // abs(self.x_velocity) * 2
+                if self.x_velocity == 1:
+                    self.x_velocity = 0
 
         if check[pygame.K_SPACE]:
-            if self.y_velocity == 0:
-                self.y_velocity = -10
+            if self.y_velocity == 0 and not self.drop:
+                self.y_velocity = -20
                 self.drop = True
         if self.drop:
+            if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
+                self.y_velocity = -self.y_velocity
+            elif pygame.sprite.spritecollideany(self, horizontal_borders):
+                self.respawn()
             self.rect.y += self.y_velocity
-            self.y_velocity += 1
+            self.y_velocity = min(50, self.y_velocity + 1)
+        self.rect.x += self.x_velocity // 5
         if self.direction:
             self.image = Spider.images_movement_right[self.current]
         else:
             self.image = Spider.images_movement_left[self.current]
 
 
-if __name__ == '__main__':
-    background = load_image("background.png")
-    player = Spider()
-    running = True
+class FlowerPlatform(pygame.sprite.Sprite):
+    images = [load_image("Platforms_1.png"), load_image("SpiderWalking2.png"),
+              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
 
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            '''if event.type == pygame.MOUSEBUTTONDOWN:
-                Landing(event.pos)'''
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.current = 1
+        self.wait = 10
+        self.x_velocity = 0
+        self.y_velocity = 0
+        self.drop = False
+        self.direction = True
+        self.image = Spider.images_movement_right[self.current]
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = 50
+        self.rect.y = 400
 
-        screen.blit(background, (0, 0))
+    def respawn(self):
+        pass
 
-        all_allies.draw(screen)
-        all_allies.update(check=pygame.key.get_pressed())
-        clock.tick(60)
-        pygame.display.flip()
-    pygame.quit()
+    def update(self, check):
+        if check[pygame.K_d]:
+            self.x_velocity = min(30, self.x_velocity + 1)
+            self.direction = self.x_velocity >= 0
+            if self.wait:
+                self.wait -= 1
+            else:
+                self.wait = 10
+                self.current = (self.current + 1) % 4
+        elif check[pygame.K_a]:
+            self.x_velocity = max(-30, self.x_velocity - 1)
+            self.direction = self.x_velocity >= 0
+            if self.wait:
+                self.wait -= 1
+            else:
+                self.wait = 10
+                self.current = (self.current + 1) % 4
+        else:
+            self.current = 1
+            if self.x_velocity:
+                self.x_velocity -= self.x_velocity // abs(self.x_velocity) * 2
+                if self.x_velocity == 1:
+                    self.x_velocity = 0
+
+        if check[pygame.K_SPACE]:
+            if self.y_velocity == 0 and not self.drop:
+                self.y_velocity = -20
+                self.drop = True
+        if self.drop:
+            if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
+                self.y_velocity = -self.y_velocity
+            elif pygame.sprite.spritecollideany(self, horizontal_borders):
+                self.respawn()
+            self.rect.y += self.y_velocity
+            self.y_velocity = min(50, self.y_velocity + 1)
+        self.rect.x += self.x_velocity // 5
+        if self.direction:
+            self.image = Spider.images_movement_right[self.current]
+        else:
+            self.image = Spider.images_movement_left[self.current]
+
+
+background = load_image("background.png")
+player = Spider()
+Border(0, -2, 1024)
+Border(-200, 700, 1224)
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        '''if event.type == pygame.MOUSEBUTTONDOWN:
+            Landing(event.pos)'''
+
+    screen.blit(background, (0, 0))
+
+    all_sprites.draw(screen)
+    all_sprites.update(check=pygame.key.get_pressed())
+    clock.tick(60)
+    pygame.display.flip()
+pygame.quit()
