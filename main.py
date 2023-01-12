@@ -13,6 +13,7 @@ pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
+all_platforms = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -43,7 +44,7 @@ class Border(pygame.sprite.Sprite):
 class Particle(pygame.sprite.Sprite):
     # сгенерируем частицы разного размера
     fire = [load_image("particle.png")]
-    for scale in (2, 3, 4):
+    for scale in (1, 2, 3):
         fire.append(pygame.transform.scale(fire[0], (scale, scale)))
 
     def __init__(self, pos, dx, dy):
@@ -57,18 +58,19 @@ class Particle(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = pos
 
         # гравитация будет одинаковой (значение константы)
-        self.gravity = -3
+        self.gravity = -0.5
 
     def update(self, check):
         # применяем гравитационный эффект:
         # движение с ускорением под действием гравитации
         self.velocity[1] += self.gravity
-        self.velocity[0] += self.gravity
+        if self.velocity[0]:
+            self.velocity[0] += self.gravity * (self.velocity[0] // abs(self.velocity[0]))
         # перемещаем частицу
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]
+        self.rect.x += int(self.velocity[0])
+        self.rect.y += int(self.velocity[1])
         # убиваем, если частица ушла за экран
-        if self.velocity[1] <= 0 or self.velocity[0] <= 0:
+        if self.velocity[1] >= 0 or self.velocity[0] == 0:
             self.kill()
 
 
@@ -129,11 +131,15 @@ class Spider(pygame.sprite.Sprite):
         if check[pygame.K_SPACE]:
             if self.y_velocity == 0 and not self.drop:
                 self.y_velocity = -20
+                self.rect.y -= 5
                 if self.x_velocity >= 25:
                     self.x_velocity = 60
                 elif self.x_velocity <= -25:
                     self.x_velocity = -60
                 self.drop = True
+        self.drop = not pygame.sprite.spritecollideany(self, all_platforms)
+        if pygame.sprite.spritecollideany(self, all_platforms):
+            self.y_velocity = 0
         if self.drop:
             if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
                 self.y_velocity = -self.y_velocity
@@ -152,11 +158,10 @@ class FlowerPlatform(pygame.sprite.Sprite):
     images = [load_image("Platforms_1.png"), load_image("Platforms_1.png"),
               load_image("Platforms_1.png"), load_image("Platforms_1.png")]
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, type_):
         super().__init__(all_sprites)
-        self.current = 1
-        self.wait = 10
-        self.image = Spider.images_movement_right[self.current]
+        self.add(all_platforms)
+        self.image = FlowerPlatform.images[type_]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.particles = False
@@ -165,11 +170,21 @@ class FlowerPlatform(pygame.sprite.Sprite):
 
     def update(self, check):
         if not self.particles and pygame.sprite.spritecollideany(self, all_allies):
-            for i in range(random.randint(30, 50)):
-                Particle((self.rect.x // 2, self.rect.y // 5), random.randint(-20, 20), random.randint(0, 20))
+            for i in range(random.randint(60, 100)):
+                Particle((self.rect.x + 19 * self.rect.width // 36, self.rect.y + self.rect.height // 8),
+                         random.randint(-10, 10), random.randint(-2, 0))
+            self.particles = True
+        elif not pygame.sprite.spritecollideany(self, all_allies):
+            self.particles = False
+
+
+def create_map():
+    # Здесь будем использовать различные классы для создания карты
+    FlowerPlatform(20, 500, 0)
 
 
 background = load_image("background.png")
+create_map()
 player = Spider()
 Border(0, -2, 1024)
 Border(-200, 700, 1224)
