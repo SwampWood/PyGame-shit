@@ -33,12 +33,29 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+        player.save_point[0] += self.dx
+
+
 class Border(pygame.sprite.Sprite):
     # строго вертикальный отрезок
     def __init__(self, x1, y1, x2):
-        super().__init__(horizontal_borders)
+        super().__init__(all_sprites)
+        self.add(horizontal_borders)
         self.image = pygame.Surface([x2 - x1, 1])
         self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+        print(self.rect.x)
 
 
 class Particle(pygame.sprite.Sprite):
@@ -94,7 +111,7 @@ class Spider(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = 50
         self.rect.y = 400
-        self.save_point = (50, 400)
+        self.save_point = [50, 400]
         self.health = 1000
         self.current_sprite = None
 
@@ -139,7 +156,7 @@ class Spider(pygame.sprite.Sprite):
         if check[pygame.K_SPACE]:
             if self.y_velocity == 0 and not self.drop:
                 self.current_sprite = None
-                self.save_point = (self.rect.x - 10, self.rect.y - 100)
+                self.save_point = [self.rect.x - 10, self.rect.y - 100]
                 self.y_velocity = -20
                 self.rect.y -= 5
                 if self.x_velocity >= 25:
@@ -217,8 +234,9 @@ def create_map():
 background = load_image("background.png")
 create_map()
 player = Spider()
-Border(0, -2, 1024)
-Border(-200, 700, 1224)
+camera = Camera()
+Border(0, -2, 6224)
+Border(-200, 700, 6224)
 running = True
 while running:
     for event in pygame.event.get():
@@ -231,6 +249,11 @@ while running:
 
     all_sprites.draw(screen)
     all_sprites.update(pygame.key.get_pressed())
+    camera.update(player)
+    for sprite in all_sprites:
+        camera.apply(sprite)
     clock.tick(60)
+    for i in horizontal_borders:
+        i.rect.x += 1
     pygame.display.flip()
 pygame.quit()
