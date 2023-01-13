@@ -94,16 +94,25 @@ class Spider(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = 50
         self.rect.y = 400
+        self.save_point = (50, 400)
+        self.health = 1000
+        self.current_sprite = None
 
     def respawn(self):
-        pass
+        if self.health == 1:
+            '''EndScreen()'''
+        else:
+            self.health -= 1
+            self.rect.x = self.save_point[0]
+            self.rect.y = self.save_point[1]
+            self.x_velocity = 0
+            self.y_velocity = 0
 
     def update(self, check):
         if check[pygame.K_d]:
-            if not self.drop:
-                self.x_velocity = min(30, self.x_velocity + 1)
-            else:
-                self.x_velocity = self.x_velocity + 1
+            if self.x_velocity < 0:
+                self.x_velocity += 2
+            self.x_velocity += 1
             self.direction = self.x_velocity >= 0
             if self.wait:
                 self.wait -= 1
@@ -111,10 +120,9 @@ class Spider(pygame.sprite.Sprite):
                 self.wait = 10
                 self.current = (self.current + 1) % 4
         elif check[pygame.K_a]:
-            if not self.drop:
-                self.x_velocity = max(-30, self.x_velocity - 1)
-            else:
-                self.x_velocity = self.x_velocity - 1
+            if self.x_velocity > 0:
+                self.x_velocity -= 2
+            self.x_velocity -= 1
             self.direction = self.x_velocity >= 0
             if self.wait:
                 self.wait -= 1
@@ -130,6 +138,8 @@ class Spider(pygame.sprite.Sprite):
 
         if check[pygame.K_SPACE]:
             if self.y_velocity == 0 and not self.drop:
+                self.current_sprite = None
+                self.save_point = (self.rect.x - 10, self.rect.y - 100)
                 self.y_velocity = -20
                 self.rect.y -= 5
                 if self.x_velocity >= 25:
@@ -137,16 +147,36 @@ class Spider(pygame.sprite.Sprite):
                 elif self.x_velocity <= -25:
                     self.x_velocity = -60
                 self.drop = True
-        self.drop = not pygame.sprite.spritecollideany(self, all_platforms)
-        if pygame.sprite.spritecollideany(self, all_platforms):
-            self.y_velocity = 0
+        for i in all_platforms:
+            if pygame.sprite.collide_mask(self, i):
+                self.current_sprite = i
+                self.y_velocity = 0
+                self.rect.y -= 40
+                if pygame.sprite.collide_mask(self, i):
+                    self.x_velocity = -self.x_velocity // 3
+                    self.rect.x += 15
+                    if pygame.sprite.collide_mask(self, i):
+                        self.rect.x -= 30
+                    self.rect.y += 40
+                else:
+                    self.rect.y += 40
+                    while pygame.sprite.collide_mask(self, i):
+                        self.rect.y -= 1
+                    else:
+                        self.rect.y += 1
+                    self.drop = False
+                break
+            else:
+                self.drop = True
         if self.drop:
             if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
-                self.y_velocity = -self.y_velocity
+                self.y_velocity = -self.y_velocity // 2
             elif pygame.sprite.spritecollideany(self, horizontal_borders):
                 self.respawn()
             self.rect.y += self.y_velocity
             self.y_velocity = min(50, self.y_velocity + 1)
+        else:
+            self.x_velocity = max(-30, min(30, self.x_velocity))
         self.rect.x += self.x_velocity // 5
         if self.direction:
             self.image = Spider.images_movement_right[self.current]
@@ -155,8 +185,8 @@ class Spider(pygame.sprite.Sprite):
 
 
 class FlowerPlatform(pygame.sprite.Sprite):
-    images = [load_image("Platforms_1.png"), load_image("Platforms_1.png"),
-              load_image("Platforms_1.png"), load_image("Platforms_1.png")]
+    images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
+              load_image("Platforms1.png"), load_image("Platforms1.png")]
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
@@ -169,18 +199,19 @@ class FlowerPlatform(pygame.sprite.Sprite):
         self.rect.y = y
 
     def update(self, check):
-        if not self.particles and pygame.sprite.spritecollideany(self, all_allies):
+        if not self.particles and pygame.sprite.collide_mask(self, player) and player.current_sprite != self:
             for i in range(random.randint(60, 100)):
-                Particle((self.rect.x + 19 * self.rect.width // 36, self.rect.y + self.rect.height // 8),
+                Particle((self.rect.x + self.rect.width // 2, self.rect.y + self.rect.height // 8),
                          random.randint(-10, 10), random.randint(-2, 0))
             self.particles = True
-        elif not pygame.sprite.spritecollideany(self, all_allies):
+        elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
 
 
 def create_map():
     # Здесь будем использовать различные классы для создания карты
-    FlowerPlatform(20, 500, 0)
+    FlowerPlatform(20, 500, 1)
+    FlowerPlatform(600, 300, 0)
 
 
 background = load_image("background.png")
