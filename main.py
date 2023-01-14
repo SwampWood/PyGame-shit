@@ -14,6 +14,7 @@ all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
+tree = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -55,7 +56,6 @@ class Border(pygame.sprite.Sprite):
         self.add(horizontal_borders)
         self.image = pygame.Surface([x2 - x1, 1])
         self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
-        print(self.rect.x)
 
 
 class Particle(pygame.sprite.Sprite):
@@ -104,6 +104,7 @@ class Spider(pygame.sprite.Sprite):
         self.wait = 10
         self.x_velocity = 0
         self.y_velocity = 0
+        self.immunity_frames = 0
         self.drop = False
         self.direction = True
         self.image = Spider.images_movement_right[self.current]
@@ -119,6 +120,7 @@ class Spider(pygame.sprite.Sprite):
         if self.health == 1:
             '''EndScreen()'''
         else:
+            self.immunity_frames = 60
             self.health -= 1
             self.rect.x = self.save_point[0]
             self.rect.y = self.save_point[1]
@@ -126,6 +128,7 @@ class Spider(pygame.sprite.Sprite):
             self.y_velocity = 0
 
     def update(self, check):
+        self.immunity_frames = max(0, self.immunity_frames - 1)
         if check[pygame.K_d]:
             if self.x_velocity < 0:
                 self.x_velocity += 2
@@ -156,7 +159,6 @@ class Spider(pygame.sprite.Sprite):
         if check[pygame.K_SPACE]:
             if self.y_velocity == 0 and not self.drop:
                 self.current_sprite = None
-                self.save_point = [self.rect.x - 10, self.rect.y - 100]
                 self.y_velocity = -20
                 self.rect.y -= 5
                 if self.x_velocity >= 25:
@@ -185,20 +187,41 @@ class Spider(pygame.sprite.Sprite):
                 break
             else:
                 self.drop = True
+        if pygame.sprite.collide_mask(self, [x for x in tree][0]):
+            self.x_velocity = 60
+        if pygame.sprite.spritecollideany(self, all_enemies) and not self.immunity_frames:
+            for enemy in all_enemies:
+                if pygame.sprite.collide_mask(self, enemy):
+                    self.respawn()
+        if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
+            self.y_velocity = -self.y_velocity // 2
+        elif pygame.sprite.spritecollideany(self, horizontal_borders):
+            self.respawn()
         if self.drop:
-            if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
-                self.y_velocity = -self.y_velocity // 2
-            elif pygame.sprite.spritecollideany(self, horizontal_borders):
-                self.respawn()
             self.rect.y += self.y_velocity
             self.y_velocity = min(50, self.y_velocity + 1)
         else:
             self.x_velocity = max(-30, min(30, self.x_velocity))
+            self.save_point = [self.rect.x, self.rect.y - 20]
         self.rect.x += self.x_velocity // 5
         if self.direction:
             self.image = Spider.images_movement_right[self.current]
         else:
             self.image = Spider.images_movement_left[self.current]
+
+
+class TreeBorder(pygame.sprite.Sprite):
+    images = load_image("TreeWall.png")
+
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.add(tree)
+        self.image = TreeBorder.images
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = -1000
+        self.rect.y = -100
 
 
 class FlowerPlatform(pygame.sprite.Sprite):
@@ -225,25 +248,55 @@ class FlowerPlatform(pygame.sprite.Sprite):
             self.particles = False
 
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y, sheet, count, health=50):
+        super().__init__(all_sprites)
+        self.add(all_enemies)
+        self.health = health
+        self.wait = 5
+        self.frames = []
+        self.cut_sheet(sheet, count)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+
+    def cut_sheet(self, sheet, columns):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height())
+        for i in range(columns):
+            frame_location = (self.rect.w * i, 0)
+            self.frames.append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
+
+    def update(self, check):
+        self.wait -= 1
+        if self.wait == 0:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+            self.wait = 5
+
+
 def create_map():
     # Здесь будем использовать различные классы для создания карты
+    enemy_flower = load_image('VenusFlyTrapAnimation.png')
+    TreeBorder()
     FlowerPlatform(20, 500, 1)
-    FlowerPlatform(600, 300, 0)
+    FlowerPlatform(600, 400, 0)
+    Enemy(650, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
 create_map()
 player = Spider()
+Border(0, -2, 6624)
+Border(0, 700, 6624)
 camera = Camera()
-Border(0, -2, 6224)
-Border(-200, 700, 6224)
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        '''if event.type == pygame.MOUSEBUTTONDOWN:
-            Landing(event.pos)'''
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            player.respawn()
 
     screen.blit(background, (0, 0))
 
@@ -253,7 +306,5 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
     clock.tick(60)
-    for i in horizontal_borders:
-        i.rect.x += 1
     pygame.display.flip()
 pygame.quit()
