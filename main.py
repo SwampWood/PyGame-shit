@@ -91,6 +91,35 @@ class Particle(pygame.sprite.Sprite):
             self.kill()
 
 
+class Web(pygame.sprite.Sprite):
+    head = load_image('WebHead.png')
+    body = load_image('WebBody.png')
+
+    def __init__(self, source, target):
+        super().__init__(all_sprites)
+        self.add(all_allies)
+        self.length = 0
+        self.wait = 5
+        self.image = Web.head
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = source[0]
+        self.rect.y = source[1]
+        self.target = target
+        self.velocity = 0
+
+    def update(self, check):
+        if pygame.sprite.spritecollideany(self, all_platforms):
+            for x in all_platforms:
+                if pygame.sprite.collide_mask(self, x):
+                    player.webbed = True
+                    self.target = (self.rect.x, self.rect.y - 10)
+        elif self.length > 15:
+            self.kill()
+        elif 1:
+            pass
+
+
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -115,6 +144,8 @@ class Spider(pygame.sprite.Sprite):
         self.save_point = [50, 400]
         self.health = 1000
         self.current_sprite = None
+        self.webbed = False
+        self.web = None
 
     def respawn(self):
         if self.health == 1:
@@ -157,6 +188,10 @@ class Spider(pygame.sprite.Sprite):
                     self.x_velocity = 0
 
         if check[pygame.K_SPACE]:
+            self.webbed = False
+            if self.web:
+                self.web.kill()
+            self.web = None
             if self.y_velocity == 0 and not self.drop:
                 self.current_sprite = None
                 self.y_velocity = -20
@@ -166,6 +201,11 @@ class Spider(pygame.sprite.Sprite):
                 elif self.x_velocity <= -25:
                     self.x_velocity = -60
                 self.drop = True
+
+        if check[pygame.MOUSEBUTTONDOWN]:
+            if 1 and not self.webbed and self.web is None:
+                self.web = Web((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2), pygame.mouse.get_pos())
+
         for i in all_platforms:
             if pygame.sprite.collide_mask(self, i):
                 self.current_sprite = i
@@ -281,7 +321,7 @@ def create_map():
     TreeBorder()
     FlowerPlatform(20, 500, 1)
     FlowerPlatform(600, 400, 0)
-    Enemy(650, 280, enemy_flower, 6)
+    Enemy(750, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
@@ -295,8 +335,11 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             player.respawn()
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.webbed and player.web is None:
+            player.web = Web((player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2),
+                             pygame.mouse.get_pos())
 
     screen.blit(background, (0, 0))
 
