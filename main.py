@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import pygame
+import math
 
 
 pygame.init()
@@ -92,20 +93,25 @@ class Particle(pygame.sprite.Sprite):
 
 
 class Web(pygame.sprite.Sprite):
-    head = load_image('WebHead.png')
-    body = load_image('WebBody.png')
+    web = load_image('Web.png')
 
     def __init__(self, source, target):
         super().__init__(all_sprites)
         self.add(all_allies)
-        self.length = 0
+        self.length = 20
         self.wait = 5
-        self.image = Web.head
+        self.angle = math.degrees(math.atan((player.rect.y - target[1]) / (target[0] - 512))) + 270
+        if target[0] < 512:
+            self.angle -= 180
+        self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = source[0]
+        self.x_step = int(5 * math.cos(math.radians(self.angle)))
         self.rect.y = source[1]
+        self.y_step = int(5 * math.sin(math.radians(self.angle)))
         self.target = target
+
         self.velocity = 0
 
     def update(self, check):
@@ -114,10 +120,15 @@ class Web(pygame.sprite.Sprite):
                 if pygame.sprite.collide_mask(self, x):
                     player.webbed = True
                     self.target = (self.rect.x, self.rect.y - 10)
-        elif self.length > 15:
+        elif self.length > 299:
+            player.web = None
             self.kill()
-        elif 1:
-            pass
+        else:
+            self.length += 5
+            self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
+            self.mask = pygame.mask.from_surface(self.image)
+            self.rect.x += self.x_step
+            self.rect.y += self.y_step
 
 
 class Spider(pygame.sprite.Sprite):
@@ -266,7 +277,7 @@ class TreeBorder(pygame.sprite.Sprite):
 
 class FlowerPlatform(pygame.sprite.Sprite):
     images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
-              load_image("Platforms1.png"), load_image("Platforms1.png")]
+              load_image("Platforms3.png"), load_image("Platforms1.png")]
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
@@ -321,7 +332,8 @@ def create_map():
     TreeBorder()
     FlowerPlatform(20, 500, 1)
     FlowerPlatform(600, 400, 0)
-    Enemy(750, 280, enemy_flower, 6)
+    FlowerPlatform(1000, 300, 2)
+    Enemy(800, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
