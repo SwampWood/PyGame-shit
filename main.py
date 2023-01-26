@@ -100,16 +100,21 @@ class Web(pygame.sprite.Sprite):
         self.add(all_allies)
         self.length = 20
         self.wait = 5
-        self.angle = math.degrees(math.atan((player.rect.y - target[1]) / (target[0] - 512))) + 270
-        if target[0] < 512:
-            self.angle -= 180
-        self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
+        # зададим угол, под которым находится цель
+        self.angle = math.degrees(math.atan2((player.rect.y - target[1]), (target[0] - 512)))
+        if target[0] - 512 < 0:
+            self.x_negative = -1
+        else:
+            self.x_negative = 1
+        if target[1] > player.rect.y + 25:
+            self.y_negative = -1
+        else:
+            self.y_negative = 1
+        self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), -self.angle)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = source[0]
-        self.x_step = int(5 * math.cos(math.radians(self.angle)))
         self.rect.y = source[1]
-        self.y_step = int(5 * math.sin(math.radians(self.angle)))
         self.target = target
 
         self.velocity = 0
@@ -127,8 +132,13 @@ class Web(pygame.sprite.Sprite):
             self.length += 5
             self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
             self.mask = pygame.mask.from_surface(self.image)
-            self.rect.x += self.x_step
-            self.rect.y += self.y_step
+            self.rect.x = player.rect.x + 25
+            self.rect.y = player.rect.y + 25
+            if self.x_negative == -1:
+                self.rect.x -= math.cos(math.radians(self.angle)) * self.length
+            if self.y_negative == 1:
+                self.rect.y -= self.length
+
 
 
 class Spider(pygame.sprite.Sprite):
