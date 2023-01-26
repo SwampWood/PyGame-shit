@@ -326,6 +326,27 @@ class Enemy(pygame.sprite.Sprite):
             self.wait = 5
 
 
+class Wasp(Enemy):
+    def __init__(self, x, y, sheet, count, left_pos, right_pos, v=3, health=50):
+        super().__init__(x, y, sheet, count, health)
+        self.left_pos = left_pos
+        self.right_pos = right_pos
+        self.v = v
+        self.x_pos = self.left_pos
+        self.rotation = False
+
+    def update(self, check):
+        super().update(check)
+        if self.rotation:
+            self.rect.x -= self.v # v * t в секундах
+        else:
+            self.rect.x += self.v # v * t в секундах
+        if self.rect.x >= self.right_pos:
+            self.rotation = True
+        elif self.rect.x <= self.left_pos:
+            self.rotation = False
+
+
 def create_map():
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
@@ -333,6 +354,7 @@ def create_map():
     FlowerPlatform(20, 500, 1)
     FlowerPlatform(600, 400, 0)
     FlowerPlatform(1000, 300, 2)
+    Wasp(600, 350, enemy_flower, 6, 700, 800)
     Enemy(800, 280, enemy_flower, 6)
 
 
