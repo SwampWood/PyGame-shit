@@ -2,7 +2,7 @@ import os
 import sys
 import random
 import pygame
-import math
+from math import atan2, sin, cos, degrees, radians
 
 
 pygame.init()
@@ -15,6 +15,7 @@ all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
+all_branches = pygame.sprite.Group()
 tree = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
@@ -43,6 +44,8 @@ class Camera:
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
+        if obj.__class__.__name__ == 'Web':
+            obj.target = (obj.target[0] + self.dx, obj.target[1])
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -95,13 +98,13 @@ class Particle(pygame.sprite.Sprite):
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
 
-    def __init__(self, source, target):
+    def __init__(self, target):
         super().__init__(all_sprites)
         self.add(all_allies)
-        self.length = 20
+        self.length = 13
         self.wait = 5
         # зададим угол, под которым находится цель
-        self.angle = math.degrees(math.atan2((player.rect.y - target[1]), (target[0] - 512)))
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512))) + 270
         if target[0] - 512 < 0:
             self.x_negative = -1
         else:
@@ -110,35 +113,45 @@ class Web(pygame.sprite.Sprite):
             self.y_negative = -1
         else:
             self.y_negative = 1
-        self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), -self.angle)
+        self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length + 5), self.angle)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = source[0]
-        self.rect.y = source[1]
+        self.rect.x = player.rect.x + 15
+        self.rect.y = player.rect.y + 30
         self.target = target
 
         self.velocity = 0
 
     def update(self, check):
-        if pygame.sprite.spritecollideany(self, all_platforms):
-            for x in all_platforms:
+        if pygame.sprite.spritecollideany(self, all_branches):
+            for x in all_branches:
                 if pygame.sprite.collide_mask(self, x):
                     player.webbed = True
-                    self.target = (self.rect.x, self.rect.y - 10)
-        elif self.length > 299:
-            player.web = None
-            self.kill()
+                    self.target = (self.rect.x, self.rect.y - 30)
+        elif not player.webbed:
+            if self.length > 358:
+                player.web = None
+                self.kill()
+            else:
+                self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]), (self.target[0] - 512))) + 270
+                self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
+                self.length += 15
+
+                self.mask = pygame.mask.from_surface(self.image)
+                self.rect.x = player.rect.x + 15
+                self.rect.y = player.rect.y + 30
+                if self.target[0] - 512 < 0:
+                    self.rect.x -= sin(radians(self.angle)) * self.length
+                if self.y_negative == 1:
+                    self.rect.y -= cos(radians(self.angle)) * self.length
         else:
-            self.length += 5
+            self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]), (self.target[0] - 512)))
             self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
             self.mask = pygame.mask.from_surface(self.image)
-            self.rect.x = player.rect.x + 25
-            self.rect.y = player.rect.y + 25
-            if self.x_negative == -1:
-                self.rect.x -= math.cos(math.radians(self.angle)) * self.length
-            if self.y_negative == 1:
-                self.rect.y -= self.length
-
+            self.rect.x = player.rect.x + 15
+            self.rect.y = self.target[1]
+            if self.target[0] - 512 < 0:
+                self.rect.x -= sin(radians(self.angle)) * self.length
 
 
 class Spider(pygame.sprite.Sprite):
@@ -225,7 +238,7 @@ class Spider(pygame.sprite.Sprite):
 
         if check[pygame.MOUSEBUTTONDOWN]:
             if 1 and not self.webbed and self.web is None:
-                self.web = Web((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2), pygame.mouse.get_pos())
+                self.web = Web(pygame.mouse.get_pos())
 
         for i in all_platforms:
             if pygame.sprite.collide_mask(self, i):
@@ -258,13 +271,15 @@ class Spider(pygame.sprite.Sprite):
             self.y_velocity = -self.y_velocity // 2
         elif pygame.sprite.spritecollideany(self, horizontal_borders):
             self.respawn()
-        if self.drop:
-            self.rect.y += self.y_velocity
+        if self.webbed:
+            pass
+        elif self.drop:
             self.y_velocity = min(50, self.y_velocity + 1)
         else:
             self.x_velocity = max(-30, min(30, self.x_velocity))
             self.save_point = [self.rect.x, self.rect.y - 20]
         self.rect.x += self.x_velocity // 5
+        self.rect.y += self.y_velocity
         if self.direction:
             self.image = Spider.images_movement_right[self.current]
         else:
@@ -309,6 +324,20 @@ class FlowerPlatform(pygame.sprite.Sprite):
             self.particles = False
 
 
+class TreeBranch(pygame.sprite.Sprite):
+    images = [load_image("Branch1.png")]
+
+    def __init__(self, x, y, type_):
+        super().__init__(all_sprites)
+        self.add(all_branches)
+        self.image = TreeBranch.images[type_]
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x
+        self.rect.y = y
+
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, sheet, count, health=50):
         super().__init__(all_sprites)
@@ -344,6 +373,7 @@ def create_map():
     FlowerPlatform(600, 400, 0)
     FlowerPlatform(1000, 300, 2)
     Enemy(800, 280, enemy_flower, 6)
+    TreeBranch(1300, 0, 0)
 
 
 background = load_image("background.png")
@@ -360,8 +390,7 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             player.respawn()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.webbed and player.web is None:
-            player.web = Web((player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2),
-                             pygame.mouse.get_pos())
+            player.web = Web(pygame.mouse.get_pos())
 
     screen.blit(background, (0, 0))
 
