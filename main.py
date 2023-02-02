@@ -283,7 +283,6 @@ class Spider(pygame.sprite.Sprite):
                 self.y_velocity += sin(radians(self.web.angle))
             else:
                 self.y_velocity -= sin(radians(self.web.angle))
-            print(self.web.angle)
             if 360 < self.web.angle <= 450:
                 self.x_velocity = -tan(radians(self.web.angle - 270)) * self.y_velocity
             elif 270 <= self.web.angle < 360:
