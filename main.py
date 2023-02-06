@@ -4,7 +4,6 @@ import random
 import pygame
 from math import atan2, sin, cos, tan, degrees, radians
 
-
 pygame.init()
 clock = pygame.time.Clock()
 size = width, height = 1024, 600
@@ -128,6 +127,8 @@ class Web(pygame.sprite.Sprite):
                 if pygame.sprite.collide_mask(self, x):
                     player.webbed = True
                     self.target = (self.rect.x, self.rect.y)
+                    player.max_y_velocity = player.y_velocity
+                    player.going_up = False
             else:
                 if self.length > 358:
                     player.web = None
@@ -168,6 +169,8 @@ class Spider(pygame.sprite.Sprite):
         self.wait = 10
         self.x_velocity = 0
         self.y_velocity = 0
+        self.max_y_velocity = 0
+        self.turning = False
         self.going_up = False
         self.immunity_frames = 0
         self.drop = False
@@ -287,9 +290,11 @@ class Spider(pygame.sprite.Sprite):
                 self.x_velocity = -tan(radians(self.web.angle - 270)) * self.y_velocity
             elif 270 <= self.web.angle < 360:
                 self.x_velocity = tan(radians(self.web.angle - 270)) * self.y_velocity
-            else:
+            if self.y_velocity <= -self.max_y_velocity:
                 self.going_up = not self.going_up
-                self.y_velocity = 0
+            elif self.y_velocity > self.max_y_velocity:
+                self.y_velocity = self.max_y_velocity
+            print(self.y_velocity)
         elif self.drop:
             self.y_velocity = min(50, self.y_velocity + 1)
         else:
