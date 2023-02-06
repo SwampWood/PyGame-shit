@@ -43,6 +43,9 @@ class Camera:
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
+        if obj.__class__.__name__ == 'Wasp':
+            obj.right_pos += self.dx
+            obj.left_pos += self.dx
 
     # позиционировать камеру на объекте target
     def update(self, target):
