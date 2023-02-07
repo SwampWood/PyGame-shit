@@ -132,7 +132,7 @@ class Bite(pygame.sprite.Sprite):
                 if player.direction:
                     self.rect.x, self.rect.y = player.rect.x + 80, player.rect.y - 10
                 else:
-                    self.rect.x, self.rect.y = player.rect.x - 10, player.rect.y - 10
+                    self.rect.x, self.rect.y = player.rect.x - 30, player.rect.y - 10
                 self.wait = 2
 
 
@@ -150,6 +150,7 @@ class Spider(pygame.sprite.Sprite):
         self.x_velocity = 0
         self.y_velocity = 0
         self.immunity_frames = 0
+        self.attack_cd = 0
         self.drop = False
         self.direction = True
         self.image = Spider.images_movement_right[self.current]
@@ -176,6 +177,7 @@ class Spider(pygame.sprite.Sprite):
 
     def update(self, check):
         self.immunity_frames = max(0, self.immunity_frames - 1)
+        self.attack_cd = max(0, self.attack_cd - 1)
         if check[pygame.K_d]:
             if self.x_velocity < 0:
                 self.x_velocity += 2
@@ -340,9 +342,6 @@ class Enemy(pygame.sprite.Sprite):
             self.kill()
 
 
-
-
-
 class Wasp(Enemy):
     def __init__(self, x, y, sheet, count, left_pos, right_pos, v=3, health=50):
         super().__init__(x, y, sheet, count, health)
@@ -386,7 +385,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.attack_cd:
+            player.attack_cd = 30
             Bite()
 
     screen.blit(background, (0, 0))
