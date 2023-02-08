@@ -102,7 +102,7 @@ class Bite(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites)
         self.add(all_attacks)
-        self.damage = 50
+        self.damage = 110
         self.wait = 2
         self.frames = []
         self.cut_sheet(Bite.bite, 11)
@@ -143,7 +143,7 @@ class Poison(pygame.sprite.Sprite):
     def __init__(self, target):
         super().__init__(all_sprites)
         self.add(all_attacks)
-        self.damage = 10
+        self.damage = 20
         self.wait = 6
         self.frames = []
         self.cut_sheet(Poison.poison, 4)
@@ -154,7 +154,7 @@ class Poison(pygame.sprite.Sprite):
         self.y_velocity = -int(sin(radians(self.angle)) * 10)
         self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x, self.rect.y = player.rect.x + 60, player.rect.y + 20
+        self.rect.x, self.rect.y = player.rect.x + 30, player.rect.y
 
     def cut_sheet(self, sheet, columns):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -346,7 +346,7 @@ class FlowerPlatform(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, sheet, count, health=50):
+    def __init__(self, x, y, sheet, count, health=100):
         super().__init__(all_sprites)
         self.add(all_enemies)
         self.health = health
@@ -386,14 +386,14 @@ class Enemy(pygame.sprite.Sprite):
                     if i.__class__.__name__ == 'Bite' and random.randint(1, 100) == 98:
                         player.health += 1
                     elif i.__class__.__name__ == 'Poison':
-                        self.poison_damage = 30
+                        self.poison_damage = 40
 
         if self.health <= 0:
             self.kill()
 
 
 class Wasp(Enemy):
-    def __init__(self, x, y, sheet, count, left_pos, right_pos, v=3, health=50):
+    def __init__(self, x, y, sheet, count, left_pos, right_pos, v=3, health=150):
         super().__init__(x, y, sheet, count, health)
         self.left_pos = left_pos
         self.right_pos = right_pos
