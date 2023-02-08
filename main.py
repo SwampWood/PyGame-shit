@@ -276,12 +276,9 @@ class Enemy(pygame.sprite.Sprite):
 
 
 def create_map():
-    # Здесь будем использовать различные классы для создания карты
-    enemy_flower = load_image('VenusFlyTrapAnimation.png')
-    TreeBorder()
-    FlowerPlatform(20, 500, 1)
-    FlowerPlatform(600, 400, 0)
-    Enemy(650, 280, enemy_flower, 6)
+    # Здесь откроем файл с картой и добавим все объекты
+    with open('map.txt') as file:
+        exec(file.read())
 
 
 background = load_image("background.png")
