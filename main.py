@@ -355,6 +355,7 @@ class Enemy(pygame.sprite.Sprite):
         self.frames = []
         self.cut_sheet(sheet, count)
         self.cur_frame = 0
+        self.rotation = False
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
         self.immunity_frames = 0
@@ -375,7 +376,7 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.wait == 0:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = self.frames[self.cur_frame]
+            self.image = pygame.transform.flip(self.frames[self.cur_frame], self.rotation, False)
             self.wait = 5
         if not self.immunity_frames:
             for i in all_attacks:
@@ -393,13 +394,15 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Wasp(Enemy):
-    def __init__(self, x, y, sheet, count, left_pos, right_pos, v=3, health=150):
+    wasp = load_image("Wasp.png")
+
+    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=4, v=3, health=150):
+        sheet = Wasp.wasp if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.left_pos = left_pos
         self.right_pos = right_pos
         self.v = v
         self.x_pos = self.left_pos
-        self.rotation = False
 
     def update(self, check):
         super().update(check)
@@ -420,7 +423,7 @@ def create_map():
     FlowerPlatform(20, 500, 1)
     FlowerPlatform(600, 400, 0)
     FlowerPlatform(1000, 300, 2)
-    Wasp(600, 350, enemy_flower, 6, 700, 800)
+    Wasp(1000, 150, 900, 1300)
     Enemy(800, 280, enemy_flower, 6)
 
 
