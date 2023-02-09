@@ -2,7 +2,7 @@ import os
 import sys
 import random
 import pygame
-from math import atan2, sin, cos, tan, degrees, radians
+from math import atan2, sin, cos, degrees, radians
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -119,16 +119,18 @@ class Web(pygame.sprite.Sprite):
         self.rect.y = player.rect.y + 30
         self.target = target
 
-        self.velocity = 0
-
     def update(self, check):
         if not player.webbed:
             for x in all_branches:
                 if pygame.sprite.collide_mask(self, x):
                     player.webbed = True
-                    self.target = (self.rect.x, self.rect.y)
-                    player.max_y_velocity = player.y_velocity
-                    player.going_up = False
+                    if player.x_velocity < 0:
+                        self.target = (self.rect.x, self.rect.y)
+                        player.going_up = True
+                    else:
+                        self.target = (self.rect.x + self.length * cos(radians(self.angle - 270)), self.rect.y)
+                        player.going_up = False
+
             else:
                 if self.length > 358:
                     player.web = None
@@ -147,7 +149,8 @@ class Web(pygame.sprite.Sprite):
                         self.rect.y -= cos(radians(self.angle)) * self.length
         else:
             self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]), (self.target[0] - 512))) + 270
-            self.length = min(359, self.length)
+            self.length = int(((self.target[0] - player.rect.x + 15) ** 2 + (player.rect.y - self.target[1] + 50) ** 2)
+                              ** 0.5)
             self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
             self.mask = pygame.mask.from_surface(self.image)
             self.rect.x = player.rect.x + 15
@@ -169,8 +172,6 @@ class Spider(pygame.sprite.Sprite):
         self.wait = 10
         self.x_velocity = 0
         self.y_velocity = 0
-        self.max_y_velocity = 0
-        self.turning = False
         self.going_up = False
         self.immunity_frames = 0
         self.drop = False
@@ -233,7 +234,12 @@ class Spider(pygame.sprite.Sprite):
         if check[pygame.K_SPACE]:
             self.webbed = False
             if self.web:
+                self.x_velocity = -50
+                self.y_velocity = -20
+                if self.web.target[0] - 512 < 0:
+                    self.x_velocity = 60
                 self.web.kill()
+
             self.web = None
             if self.y_velocity == 0 and not self.drop:
                 self.current_sprite = None
@@ -276,25 +282,21 @@ class Spider(pygame.sprite.Sprite):
             for enemy in all_enemies:
                 if pygame.sprite.collide_mask(self, enemy):
                     self.respawn()
-        if pygame.sprite.spritecollideany(self, horizontal_borders) and self.y_velocity <= 0 and self.rect.y < 5:
-            self.y_velocity = -self.y_velocity // 2
+        if pygame.sprite.spritecollideany(self, horizontal_borders) and self.rect.y < 5:
+            self.y_velocity = abs(self.y_velocity) // 2
             self.going_up = False
         elif pygame.sprite.spritecollideany(self, horizontal_borders):
             self.respawn()
         if self.webbed and self.web:
+            velocity = (abs(2 * self.web.length * sin(radians(self.web.angle - 270)))) ** 0.5
             if self.going_up:
-                self.y_velocity += sin(radians(self.web.angle))
-            else:
-                self.y_velocity -= sin(radians(self.web.angle))
-            if 360 < self.web.angle <= 450:
-                self.x_velocity = -tan(radians(self.web.angle - 270)) * self.y_velocity
-            elif 270 <= self.web.angle < 360:
-                self.x_velocity = tan(radians(self.web.angle - 270)) * self.y_velocity
-            if self.y_velocity <= -self.max_y_velocity:
+                velocity *= -1
+            self.y_velocity = int(cos(radians(self.web.angle - 270)) * velocity)
+            self.x_velocity = int(sin(radians(self.web.angle - 270)) * velocity)
+            if self.web.angle >= 449 or self.web.angle <= 270:
                 self.going_up = not self.going_up
-            elif self.y_velocity > self.max_y_velocity:
-                self.y_velocity = self.max_y_velocity
-            print(self.y_velocity)
+                self.y_velocity = 10
+
         elif self.drop:
             self.y_velocity = min(50, self.y_velocity + 1)
         else:
