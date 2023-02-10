@@ -149,9 +149,9 @@ class Poison(pygame.sprite.Sprite):
         self.cut_sheet(Poison.poison, 4)
         self.cur_frame = 0
         self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512)))
-        self.x_velocity = int(cos(radians(self.angle)) * 10)
+        self.x_velocity = int(cos(radians(self.angle)) * 20)
 
-        self.y_velocity = -int(sin(radians(self.angle)) * 10)
+        self.y_velocity = -int(sin(radians(self.angle)) * 20)
         self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = player.rect.x + 30, player.rect.y
@@ -438,7 +438,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.attack_cd:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             player.attack_cd = 30
             Bite()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
