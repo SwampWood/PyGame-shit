@@ -15,6 +15,7 @@ all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 tree = pygame.sprite.Group()
+health_bar = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -91,6 +92,39 @@ class Particle(pygame.sprite.Sprite):
             self.kill()
 
 
+class Numbers(pygame.sprite.Sprite):
+    numbers = [load_image("0.png"), load_image("1.png"), load_image("2.png"), load_image("3.png"),
+               load_image("4.png"),  load_image("5.png"), load_image("6.png"), load_image("7.png"),
+               load_image("8.png"), load_image("9.png")]
+
+    def __init__(self, pos, num):
+        super().__init__(health_bar)
+        self.image = Numbers.numbers[int(num)]
+        self.rect = self.image.get_rect()
+        self.rect.x = 90 + pos * 50
+        self.rect.y = 20
+
+
+class HealthBar(pygame.sprite.Sprite):
+    image = load_image("Heart.png")
+
+    def __init__(self):
+        super().__init__(health_bar)
+        self.health = str(player.health) if player.health < 1000 else '999'
+        self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
+        self.image = HealthBar.image
+        self.rect = self.image.get_rect()
+        self.rect.x = 20
+        self.rect.y = 20
+
+    def update(self):
+        if str(player.health) != self.health:
+            self.health = str(player.health) if player.health < 1000 else '999'
+            for i in self.numbers:
+                i.kill()
+            self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
+
+
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -113,7 +147,7 @@ class Spider(pygame.sprite.Sprite):
         self.rect.x = 50
         self.rect.y = 400
         self.save_point = [50, 400]
-        self.health = 1000
+        self.health = 100
         self.current_sprite = None
 
     def respawn(self):
@@ -286,6 +320,7 @@ create_map()
 player = Spider()
 Border(0, -2, 6624)
 Border(0, 700, 6624)
+HealthBar()
 camera = Camera()
 running = True
 while running:
@@ -298,7 +333,9 @@ while running:
     screen.blit(background, (0, 0))
 
     all_sprites.draw(screen)
+    health_bar.draw(screen)
     all_sprites.update(pygame.key.get_pressed())
+    health_bar.update()
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)

@@ -3,5 +3,5 @@ TreeBorder()
 FlowerPlatform(20, 500, 1)
 FlowerPlatform(600, 400, 0)
 FlowerPlatform(1000, 300, 2)
-Wasp(1000, 150, 900, 1300)
-Enemy(800, 280, enemy_flower, 6)
+'''Wasp(1000, 150, 900, 1300)
+Enemy(800, 280, enemy_flower, 6)'''
