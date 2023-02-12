@@ -232,17 +232,19 @@ class Spider(pygame.sprite.Sprite):
                     self.x_velocity = 0
 
         if check[pygame.K_SPACE]:
+            print(self.web)
 
-            if self.webbed:
+            if self.webbed and self.web:
                 self.x_velocity = -50
                 self.y_velocity = -20
                 if self.web.target[0] - 512 < 0:
-                    self.x_velocity = 60
-                self.webbed = False
+                    self.x_velocity = 50
 
             if self.web:
                 self.web.kill()
                 self.web = None
+
+            self.webbed = False
 
             if self.y_velocity == 0 and not self.drop:
                 self.current_sprite = None
@@ -352,7 +354,7 @@ class FlowerPlatform(pygame.sprite.Sprite):
 
 
 class TreeBranch(pygame.sprite.Sprite):
-    images = [load_image("Branch1.png"), load_image("Branch2.png")]
+    images = [load_image("Branch1.png"), load_image("Branch2.png"), load_image("Branch3.png")]
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
@@ -402,6 +404,7 @@ def create_map():
     Enemy(750, 280, enemy_flower, 6)
     TreeBranch(1300, 0, 0)
     TreeBranch(2500, 0, 1)
+    TreeBranch(3000, 0, 2)
 
 
 background = load_image("background.png")
