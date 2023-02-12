@@ -232,7 +232,6 @@ class Spider(pygame.sprite.Sprite):
                     self.x_velocity = 0
 
         if check[pygame.K_SPACE]:
-            print(self.web)
 
             if self.webbed and self.web:
                 self.x_velocity = -50
