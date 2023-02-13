@@ -546,7 +546,7 @@ Border(0, 700, 100024)
 camera = Camera()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.01)
-sound.play(5)
+sound.play(-1)
 running = True
 while running:
     for event in pygame.event.get():
