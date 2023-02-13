@@ -15,7 +15,7 @@ all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 tree = pygame.sprite.Group()
-health_bar = pygame.sprite.Group()
+system_bars = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -98,18 +98,41 @@ class Numbers(pygame.sprite.Sprite):
                load_image("8.png"), load_image("9.png")]
 
     def __init__(self, pos, num):
-        super().__init__(health_bar)
+        super().__init__(system_bars)
         self.image = Numbers.numbers[int(num)]
         self.rect = self.image.get_rect()
         self.rect.x = 90 + pos * 50
         self.rect.y = 20
 
 
+class Score:
+    def __init__(self):
+        self.score = 1000
+        self.wait = 60
+        self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
+
+    def __isub__(self, other):
+        self.score -= other
+        return self
+
+    def update(self):
+        for i in self.numbers:
+            i.kill()
+        self.wait -= 1
+        if self.wait == 0:
+            self.score -= 1
+            self.wait = 60
+        if self.score < 999999:
+            self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
+        else:
+            self.numbers = [Numbers(i + 12, '9') for i in range(6)]
+
+
 class HealthBar(pygame.sprite.Sprite):
     image = load_image("Heart.png")
 
     def __init__(self):
-        super().__init__(health_bar)
+        super().__init__(system_bars)
         self.health = str(player.health) if player.health < 1000 else '999'
         self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
         self.image = HealthBar.image
@@ -321,6 +344,7 @@ player = Spider()
 Border(0, -2, 6624)
 Border(0, 700, 6624)
 HealthBar()
+score = Score()
 camera = Camera()
 running = True
 while running:
@@ -333,9 +357,11 @@ while running:
     screen.blit(background, (0, 0))
 
     all_sprites.draw(screen)
-    health_bar.draw(screen)
+    system_bars.draw(screen)
+    score.update()
     all_sprites.update(pygame.key.get_pressed())
-    health_bar.update()
+    system_bars.update()
+
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
