@@ -554,7 +554,7 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
             player.web = Web(pygame.mouse.get_pos())
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
             player.attack_cd = 30
             Bite()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
