@@ -111,8 +111,8 @@ class Score:
         self.wait = 60
         self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
 
-    def __isub__(self, other):
-        self.score -= other
+    def __iadd__(self, other):
+        self.score += other
         return self
 
     def update(self):
@@ -120,7 +120,7 @@ class Score:
             i.kill()
         self.wait -= 1
         if self.wait == 0:
-            self.score -= 1
+            self.score = max(0, self.score - 1)
             self.wait = 60
         if self.score < 999999:
             self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
