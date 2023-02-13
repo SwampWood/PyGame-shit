@@ -247,7 +247,6 @@ class Poison(pygame.sprite.Sprite):
         self.rect.y += self.y_velocity
 
 
-
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -384,7 +383,7 @@ class Spider(pygame.sprite.Sprite):
                 velocity *= -1
             self.y_velocity = int(cos(radians(self.web.angle - 270)) * velocity)
             self.x_velocity = int(sin(radians(self.web.angle - 270)) * velocity)
-            if self.web.angle >= 449 or self.web.angle <= 270:
+            if self.web.angle >= 445 or self.web.angle <= 275:
                 self.going_up = not self.going_up
                 self.y_velocity = 10
 
@@ -532,12 +531,11 @@ def create_map():
     FlowerPlatform(600, 400, 0)
     FlowerPlatform(2000, 300, 2)
     Enemy(750, 280, enemy_flower, 6)
-    TreeBranch(1300, 0, 0)
+    TreeBranch(1500, 0, 0)
     TreeBranch(2500, 0, 1)
     TreeBranch(3000, 0, 2)
     FlowerPlatform(1000, 300, 2)
     Wasp(1000, 150, 900, 1300)
-    Enemy(800, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
@@ -546,6 +544,9 @@ player = Spider()
 Border(0, -2, 10024)
 Border(0, 700, 100024)
 camera = Camera()
+sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
+sound.set_volume(0.01)
+sound.play(5)
 running = True
 while running:
     for event in pygame.event.get():
