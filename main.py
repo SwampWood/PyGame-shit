@@ -4,6 +4,7 @@ import random
 import pygame
 from math import atan2, sin, cos, degrees, radians
 
+
 pygame.init()
 clock = pygame.time.Clock()
 size = width, height = 1024, 600
@@ -15,6 +16,7 @@ all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 all_branches = pygame.sprite.Group()
+all_attacks = pygame.sprite.Group()
 tree = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
@@ -45,6 +47,9 @@ class Camera:
         obj.rect.x += self.dx
         if obj.__class__.__name__ == 'Web':
             obj.target = (obj.target[0] + self.dx, obj.target[1])
+        if obj.__class__.__name__ == 'Wasp':
+            obj.right_pos += self.dx
+            obj.left_pos += self.dx
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -96,7 +101,7 @@ class Particle(pygame.sprite.Sprite):
 
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
-
+    
     def __init__(self, target):
         super().__init__(all_sprites)
         self.add(all_allies)
@@ -159,6 +164,90 @@ class Web(pygame.sprite.Sprite):
                 self.rect.x -= sin(radians(self.angle)) * self.length
 
 
+class Bite(pygame.sprite.Sprite):
+    bite = load_image('Bite.png')
+    
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.add(all_attacks)
+        self.damage = 110
+        self.wait = 2
+        self.frames = []
+        self.cut_sheet(Bite.bite, 11)
+        self.cur_frame = 0
+        self.image = pygame.transform.flip(self.frames[self.cur_frame], not player.direction, False)
+        self.mask = pygame.mask.from_surface(self.image)
+        if player.direction:
+            self.rect.x, self.rect.y = player.rect.x + 80, player.rect.y - 10
+        else:
+            self.rect.x, self.rect.y = player.rect.x - 30, player.rect.y - 10
+
+    def cut_sheet(self, sheet, columns):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height())
+        for i in range(columns):
+            frame_location = (self.rect.w * i, 0)
+            self.frames.append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
+
+    def update(self, check):
+        self.wait -= 1
+        if self.wait == 0:
+            self.cur_frame = (self.cur_frame + 1)
+            if self.cur_frame == 11:
+                self.kill()
+            else:
+                self.image = pygame.transform.flip(self.frames[self.cur_frame], not player.direction, False)
+                self.mask = pygame.mask.from_surface(self.image)
+                if player.direction:
+                    self.rect.x, self.rect.y = player.rect.x + 80, player.rect.y - 10
+                else:
+                    self.rect.x, self.rect.y = player.rect.x - 30, player.rect.y - 10
+                self.wait = 2
+
+
+class Poison(pygame.sprite.Sprite):
+    poison = load_image('Poison.png')
+
+    def __init__(self, target):
+        super().__init__(all_sprites)
+        self.add(all_attacks)
+        self.damage = 20
+        self.wait = 6
+        self.frames = []
+        self.cut_sheet(Poison.poison, 4)
+        self.cur_frame = 0
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512)))
+        self.x_velocity = int(cos(radians(self.angle)) * 20)
+
+        self.y_velocity = -int(sin(radians(self.angle)) * 20)
+        self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x, self.rect.y = player.rect.x + 30, player.rect.y
+
+    def cut_sheet(self, sheet, columns):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height())
+        for i in range(columns):
+            frame_location = (self.rect.w * i, 0)
+            self.frames.append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
+
+    def update(self, check):
+        self.wait -= 1
+        if self.wait == 0:
+            self.wait = 6
+            self.cur_frame = (self.cur_frame + 1) % 4
+        for i in all_platforms:
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
+        if pygame.sprite.spritecollideany(self, horizontal_borders) or pygame.sprite.spritecollideany(self, tree):
+            self.kill()
+        self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x += self.x_velocity
+        self.rect.y += self.y_velocity
+
+
+
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -174,6 +263,7 @@ class Spider(pygame.sprite.Sprite):
         self.y_velocity = 0
         self.going_up = False
         self.immunity_frames = 0
+        self.attack_cd = 0
         self.drop = False
         self.direction = True
         self.image = Spider.images_movement_right[self.current]
@@ -204,6 +294,7 @@ class Spider(pygame.sprite.Sprite):
 
     def update(self, check):
         self.immunity_frames = max(0, self.immunity_frames - 1)
+        self.attack_cd = max(0, self.attack_cd - 1)
         if check[pygame.K_d]:
             if self.x_velocity < 0:
                 self.x_velocity += 2
@@ -254,10 +345,6 @@ class Spider(pygame.sprite.Sprite):
                 elif self.x_velocity <= -25:
                     self.x_velocity = -60
                 self.drop = True
-
-        if check[pygame.MOUSEBUTTONDOWN]:
-            if not self.webbed and self.web is None:
-                self.web = Web(pygame.mouse.get_pos())
 
         for i in all_platforms:
             if pygame.sprite.collide_mask(self, i):
@@ -367,16 +454,19 @@ class TreeBranch(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, sheet, count, health=50):
+    def __init__(self, x, y, sheet, count, health=100):
         super().__init__(all_sprites)
         self.add(all_enemies)
         self.health = health
+        self.poison_damage = 0
         self.wait = 5
         self.frames = []
         self.cut_sheet(sheet, count)
         self.cur_frame = 0
+        self.rotation = False
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.immunity_frames = 0
 
     def cut_sheet(self, sheet, columns):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -387,10 +477,51 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, check):
         self.wait -= 1
+        self.immunity_frames = max(0, self.immunity_frames - 1)
+
+        self.health -= 1 if self.poison_damage else 0
+        self.poison_damage = max(0, self.poison_damage - 1)
+
         if self.wait == 0:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = self.frames[self.cur_frame]
+            self.image = pygame.transform.flip(self.frames[self.cur_frame], self.rotation, False)
             self.wait = 5
+        if not self.immunity_frames:
+            for i in all_attacks:
+                if pygame.sprite.collide_mask(self, i):
+                    self.health -= i.damage
+                    self.immunity_frames = 60
+
+                    if i.__class__.__name__ == 'Bite' and random.randint(1, 100) == 98:
+                        player.health += 1
+                    elif i.__class__.__name__ == 'Poison':
+                        self.poison_damage = 40
+
+        if self.health <= 0:
+            self.kill()
+
+
+class Wasp(Enemy):
+    wasp = load_image("Wasp.png")
+
+    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=4, v=3, health=150):
+        sheet = Wasp.wasp if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+        self.left_pos = left_pos
+        self.right_pos = right_pos
+        self.v = v
+        self.x_pos = self.left_pos
+
+    def update(self, check):
+        super().update(check)
+        if self.rotation:
+            self.rect.x -= self.v  # v в пикселях
+        else:
+            self.rect.x += self.v  # v в пикселях
+        if self.rect.x >= self.right_pos:
+            self.rotation = True
+        elif self.rect.x <= self.left_pos:
+            self.rotation = False
 
 
 def create_map():
@@ -404,6 +535,9 @@ def create_map():
     TreeBranch(1300, 0, 0)
     TreeBranch(2500, 0, 1)
     TreeBranch(3000, 0, 2)
+    FlowerPlatform(1000, 300, 2)
+    Wasp(1000, 150, 900, 1300)
+    Enemy(800, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
@@ -417,10 +551,14 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-            player.respawn()
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.webbed and player.web is None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
             player.web = Web(pygame.mouse.get_pos())
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+            player.attack_cd = 30
+            Bite()
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
+            player.attack_cd = 30
+            Poison(event.pos)
 
     screen.blit(background, (0, 0))
 
