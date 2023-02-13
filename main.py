@@ -7,8 +7,8 @@ from math import atan2, sin, cos, degrees, radians
 
 pygame.init()
 clock = pygame.time.Clock()
-size = width, height = 1024, 600
-screen = pygame.display.set_mode(size)
+size = width, height = new_width, new_height = 1024, 600
+screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 screen.fill(pygame.Color('blue'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
@@ -34,7 +34,8 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
-    return image
+    return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
+                                          image.get_size()[1] * (new_height + 100) / height))
 
 
 class Camera:
@@ -555,8 +556,8 @@ def create_map():
 background = load_image("background.png")
 create_map()
 player = Spider()
-Border(0, -2, 10024)
-Border(0, 700, 100024)
+b1 = Border(0, -2, 10024)
+b2 = Border(0, 700, 100024)
 camera = Camera()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.03)
@@ -566,6 +567,17 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.VIDEORESIZE:
+            new_width, new_height = event.w, event.h
+            background = load_image("background.png")
+            b2.rect.y = int(new_height * 1.17)
+            for j in all_sprites:
+                if j not in horizontal_borders:
+                    j.kill()
+            create_map()
+            player = Spider()
+            surface = pygame.display.set_mode((new_width, new_height),
+                                              pygame.RESIZABLE)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
             player.web = Web(pygame.mouse.get_pos())
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
