@@ -417,6 +417,7 @@ class TreeBorder(pygame.sprite.Sprite):
 class FlowerPlatform(pygame.sprite.Sprite):
     images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
               load_image("Platforms3.png"), load_image("Platforms1.png")]
+    landing = pygame.mixer.Sound(os.path.join('data', 'music', f'grass_landing{random.randint(1, 3)}.mp3'))
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
@@ -434,6 +435,8 @@ class FlowerPlatform(pygame.sprite.Sprite):
                 Particle((self.rect.x + self.rect.width // 2, self.rect.y + self.rect.height // 8),
                          random.randint(-10, 10), random.randint(-2, 0))
             self.particles = True
+            FlowerPlatform.landing.set_volume(0.01)
+            FlowerPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
 
@@ -465,6 +468,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rotation = False
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.sound = None
         self.immunity_frames = 0
 
     def cut_sheet(self, sheet, columns):
@@ -497,11 +501,14 @@ class Enemy(pygame.sprite.Sprite):
                         self.poison_damage = 40
 
         if self.health <= 0:
+            if self.sound:
+                self.sound.fadeout(500)
             self.kill()
 
 
 class Wasp(Enemy):
     wasp = load_image("Wasp.png")
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
 
     def __init__(self, x, y, left_pos, right_pos, sheet=None, count=4, v=3, health=150):
         sheet = Wasp.wasp if not sheet else sheet
@@ -510,6 +517,9 @@ class Wasp(Enemy):
         self.right_pos = right_pos
         self.v = v
         self.x_pos = self.left_pos
+        self.sound = Wasp.buzz
+        self.sound.set_volume(0)
+        self.sound.play(-1)
 
     def update(self, check):
         super().update(check)
@@ -521,6 +531,10 @@ class Wasp(Enemy):
             self.rotation = True
         elif self.rect.x <= self.left_pos:
             self.rotation = False
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
 
 
 def create_map():
@@ -545,7 +559,7 @@ Border(0, -2, 10024)
 Border(0, 700, 100024)
 camera = Camera()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
-sound.set_volume(0.01)
+sound.set_volume(0.03)
 sound.play(-1)
 running = True
 while running:
