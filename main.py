@@ -435,7 +435,7 @@ class FlowerPlatform(pygame.sprite.Sprite):
                 Particle((self.rect.x + self.rect.width // 2, self.rect.y + self.rect.height // 8),
                          random.randint(-10, 10), random.randint(-2, 0))
             self.particles = True
-            FlowerPlatform.landing.set_volume(0.01)
+            FlowerPlatform.landing.set_volume(0.05)
             FlowerPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
@@ -559,7 +559,7 @@ Border(0, -2, 10024)
 Border(0, 700, 100024)
 camera = Camera()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
-sound.set_volume(0.03)
+sound.set_volume(0.05)
 sound.play(-1)
 running = True
 while running:
@@ -568,11 +568,21 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
             player.web = Web(pygame.mouse.get_pos())
+            web_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'web_soundeffect.mp3'))
+            web_sound.set_volume(0.03)
+            web_sound.play(0)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
             player.attack_cd = 30
+            bite_sound = pygame.mixer.Sound(os.path.join('data', 'music',
+                                                           f'bite_soundeffect{random.randint(1, 2)}.mp3'))
+            bite_sound.set_volume(0.2)
+            bite_sound.play(0)
             Bite()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
             player.attack_cd = 30
+            poison_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'poison_soundeffect.mp3'))
+            poison_sound.set_volume(0.2)
+            poison_sound.play(0)
             Poison(event.pos)
 
     screen.blit(background, (0, 0))
