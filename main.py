@@ -247,7 +247,6 @@ class Poison(pygame.sprite.Sprite):
         self.rect.y += self.y_velocity
 
 
-
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -384,7 +383,7 @@ class Spider(pygame.sprite.Sprite):
                 velocity *= -1
             self.y_velocity = int(cos(radians(self.web.angle - 270)) * velocity)
             self.x_velocity = int(sin(radians(self.web.angle - 270)) * velocity)
-            if self.web.angle >= 449 or self.web.angle <= 270:
+            if self.web.angle >= 445 or self.web.angle <= 275:
                 self.going_up = not self.going_up
                 self.y_velocity = 10
 
@@ -418,6 +417,7 @@ class TreeBorder(pygame.sprite.Sprite):
 class FlowerPlatform(pygame.sprite.Sprite):
     images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
               load_image("Platforms3.png"), load_image("Platforms1.png")]
+    landing = pygame.mixer.Sound(os.path.join('data', 'music', f'grass_landing{random.randint(1, 3)}.mp3'))
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
@@ -435,6 +435,8 @@ class FlowerPlatform(pygame.sprite.Sprite):
                 Particle((self.rect.x + self.rect.width // 2, self.rect.y + self.rect.height // 8),
                          random.randint(-10, 10), random.randint(-2, 0))
             self.particles = True
+            FlowerPlatform.landing.set_volume(0.05)
+            FlowerPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
 
@@ -466,6 +468,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rotation = False
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.sound = None
         self.immunity_frames = 0
 
     def cut_sheet(self, sheet, columns):
@@ -498,11 +501,14 @@ class Enemy(pygame.sprite.Sprite):
                         self.poison_damage = 40
 
         if self.health <= 0:
+            if self.sound:
+                self.sound.fadeout(500)
             self.kill()
 
 
 class Wasp(Enemy):
     wasp = load_image("Wasp.png")
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
 
     def __init__(self, x, y, left_pos, right_pos, sheet=None, count=4, v=3, health=150):
         sheet = Wasp.wasp if not sheet else sheet
@@ -511,6 +517,9 @@ class Wasp(Enemy):
         self.right_pos = right_pos
         self.v = v
         self.x_pos = self.left_pos
+        self.sound = Wasp.buzz
+        self.sound.set_volume(0)
+        self.sound.play(-1)
 
     def update(self, check):
         super().update(check)
@@ -522,6 +531,10 @@ class Wasp(Enemy):
             self.rotation = True
         elif self.rect.x <= self.left_pos:
             self.rotation = False
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
 
 
 def create_map():
@@ -532,12 +545,11 @@ def create_map():
     FlowerPlatform(600, 400, 0)
     FlowerPlatform(2000, 300, 2)
     Enemy(750, 280, enemy_flower, 6)
-    TreeBranch(1300, 0, 0)
+    TreeBranch(1500, 0, 0)
     TreeBranch(2500, 0, 1)
     TreeBranch(3000, 0, 2)
     FlowerPlatform(1000, 300, 2)
     Wasp(1000, 150, 900, 1300)
-    Enemy(800, 280, enemy_flower, 6)
 
 
 background = load_image("background.png")
@@ -546,6 +558,9 @@ player = Spider()
 Border(0, -2, 10024)
 Border(0, 700, 100024)
 camera = Camera()
+sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
+sound.set_volume(0.05)
+sound.play(-1)
 running = True
 while running:
     for event in pygame.event.get():
@@ -553,11 +568,21 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
             player.web = Web(pygame.mouse.get_pos())
+            web_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'web_soundeffect.mp3'))
+            web_sound.set_volume(0.03)
+            web_sound.play(0)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
             player.attack_cd = 30
+            bite_sound = pygame.mixer.Sound(os.path.join('data', 'music',
+                                                           f'bite_soundeffect{random.randint(1, 2)}.mp3'))
+            bite_sound.set_volume(0.2)
+            bite_sound.play(0)
             Bite()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
             player.attack_cd = 30
+            poison_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'poison_soundeffect.mp3'))
+            poison_sound.set_volume(0.2)
+            poison_sound.play(0)
             Poison(event.pos)
 
     screen.blit(background, (0, 0))
