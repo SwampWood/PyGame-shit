@@ -192,6 +192,17 @@ class EndScreen:
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
+class StartScreeen:
+    def __init__(self):
+        global background
+        Text(400, 50, 50, 'PyGame-shit')
+        Text(290, 100, 50, 'Отомсти за своего отца')
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
+        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
 class HealthBar(pygame.sprite.Sprite):
     image = load_image("Heart.png")
 
@@ -400,7 +411,7 @@ background = pygame.transform.scale(load_image("background.png"), (width, height
 player = Spider()
 score = Score()
 camera = Camera()
-new_game()
+StartScreeen()
 
 running = True
 while running:
@@ -412,7 +423,6 @@ while running:
                 player.respawn()
 
         screen.blit(background, (0, 0))
-
         all_sprites.draw(screen)
         system_bars.draw(screen)
         score.update()
