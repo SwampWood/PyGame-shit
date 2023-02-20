@@ -16,6 +16,7 @@ all_allies = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
+current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -33,6 +34,32 @@ def load_image(name, colorkey=None):
     else:
         image = image.convert_alpha()
     return image
+
+
+def create_map():
+    # Здесь откроем файл с картой и добавим все объекты
+    with open('map.txt') as file:
+        exec(file.read())
+
+
+def new_game():
+    global all_sprites, all_enemies, all_allies, all_platforms, tree
+    global system_bars, current_UI, horizontal_borders, player, score, background
+    all_sprites = pygame.sprite.Group()
+    all_enemies = pygame.sprite.Group()
+    all_allies = pygame.sprite.Group()
+    all_platforms = pygame.sprite.Group()
+    tree = pygame.sprite.Group()
+    system_bars = pygame.sprite.Group()
+    current_UI = pygame.sprite.Group()
+    horizontal_borders = pygame.sprite.Group()
+    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    player = Spider()
+    create_map()
+    Border(0, -2, 6624)
+    Border(0, 700, 6624)
+    HealthBar()
+    score = Score()
 
 
 class Camera:
@@ -93,9 +120,7 @@ class Particle(pygame.sprite.Sprite):
 
 
 class Numbers(pygame.sprite.Sprite):
-    numbers = [load_image("0.png"), load_image("1.png"), load_image("2.png"), load_image("3.png"),
-               load_image("4.png"),  load_image("5.png"), load_image("6.png"), load_image("7.png"),
-               load_image("8.png"), load_image("9.png")]
+    numbers = [load_image(str(i) + '.png') for i in range(10)]
 
     def __init__(self, pos, num):
         super().__init__(system_bars)
@@ -126,6 +151,45 @@ class Score:
             self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
         else:
             self.numbers = [Numbers(i + 12, '9') for i in range(6)]
+
+
+class Button(pygame.sprite.Sprite):
+    image = load_image("Button.png")
+
+    def __init__(self, x, y, height_, width_, text, func_=None):
+        super().__init__(current_UI)
+        text = Text(-50, -50, height_ - 10, text)
+        text.rect.x = x + (width_ - text.image.get_width()) // 2
+        text.rect.y = y
+        self.text = text
+        self.image = pygame.transform.scale(Button.image, (width_, height_))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.func = func_
+
+    def __call__(self):
+        if self.func:
+            self.func()
+
+
+class Text(pygame.sprite.Sprite):
+    def __init__(self, x, y, size_, text, color=(255, 255, 255)):
+        super().__init__(current_UI)
+        self.image = pygame.font.Font("data/ComicSansMSPixel.ttf", size_).render(text, True, color)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+class EndScreen:
+    def __init__(self):
+        global background
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
+        Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
+        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
 class HealthBar(pygame.sprite.Sprite):
@@ -170,12 +234,12 @@ class Spider(pygame.sprite.Sprite):
         self.rect.x = 50
         self.rect.y = 400
         self.save_point = [50, 400]
-        self.health = 100
+        self.health = 10
         self.current_sprite = None
 
     def respawn(self):
         if self.health == 1:
-            '''EndScreen()'''
+            EndScreen()
         else:
             self.immunity_frames = 60
             self.health -= 1
@@ -332,39 +396,50 @@ class Enemy(pygame.sprite.Sprite):
             self.wait = 5
 
 
-def create_map():
-    # Здесь откроем файл с картой и добавим все объекты
-    with open('map.txt') as file:
-        exec(file.read())
-
-
-background = load_image("background.png")
-create_map()
+background = pygame.transform.scale(load_image("background.png"), (width, height))
 player = Spider()
-Border(0, -2, 6624)
-Border(0, 700, 6624)
-HealthBar()
 score = Score()
 camera = Camera()
+new_game()
+
 running = True
 while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            player.respawn()
+    if not current_UI:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                player.respawn()
 
-    screen.blit(background, (0, 0))
+        screen.blit(background, (0, 0))
 
-    all_sprites.draw(screen)
-    system_bars.draw(screen)
-    score.update()
-    all_sprites.update(pygame.key.get_pressed())
-    system_bars.update()
+        all_sprites.draw(screen)
+        system_bars.draw(screen)
+        score.update()
+        all_sprites.update(pygame.key.get_pressed())
+        system_bars.update()
 
-    camera.update(player)
-    for sprite in all_sprites:
-        camera.apply(sprite)
-    clock.tick(60)
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+        clock.tick(60)
+
+    else:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for sprite in current_UI:
+                    if sprite.__class__.__name__ == 'Button' and sprite.rect.collidepoint(event.pos):
+                        sprite()
+                        '''for j in current_UI:
+                            j.kill()
+                        current_UI = pygame.sprite.Group()'''
+
+        screen.blit(background, (0, 0))
+
+        current_UI.update()
+        current_UI.draw(screen)
+
     pygame.display.flip()
 pygame.quit()
