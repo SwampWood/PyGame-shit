@@ -47,7 +47,7 @@ class Camera:
         obj.rect.x += self.dx
         if obj.__class__.__name__ == 'Web':
             obj.target = (obj.target[0] + self.dx, obj.target[1])
-        if obj.__class__.__name__ == 'Wasp':
+        if obj.__class__.__name__ == 'Wasp' or obj.__class__.__name__ == 'Dragonfly':
             obj.right_pos += self.dx
             obj.left_pos += self.dx
 
@@ -507,11 +507,11 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Wasp(Enemy):
-    wasp = load_image("Wasp.png")
+    enemy = load_image("Wasp.png")
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
 
     def __init__(self, x, y, left_pos, right_pos, sheet=None, count=4, v=3, health=150):
-        sheet = Wasp.wasp if not sheet else sheet
+        sheet = Wasp.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.left_pos = left_pos
         self.right_pos = right_pos
@@ -537,6 +537,52 @@ class Wasp(Enemy):
             self.sound.set_volume(0)
 
 
+class Dragonfly(Enemy):
+    enemy = load_image("Dragonfly.png")
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
+
+    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=6, v=3, health=150):
+        sheet = Dragonfly.enemy if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+        self.left_pos = left_pos
+        self.right_pos = right_pos
+        self.v = v
+        self.waves = 0
+        self.x_pos = self.left_pos
+        self.sound = Wasp.buzz
+        self.sound.set_volume(0)
+        self.sound.play(-1)
+    def update(self, check):
+        super().update(check)
+        print(self.waves)
+        if self.rect.x >= self.right_pos:
+            self.rotation = True
+            if not self.waves:
+                self.waves = 5
+                self.rect.y += 5
+                self.v = 1
+            else:
+                self.v = 3
+        elif self.rect.x <= self.left_pos:
+            self.rotation = False
+            if not self.waves:
+                self.waves = 5
+        if self.waves:
+            self.waves -=1
+            if self.waves % 2:
+                self.rect.y += 5
+            else:
+                self.rect.y -= 5
+        elif self.rotation:
+            self.rect.x -= self.v  # v в пикселях
+        else:
+            self.rect.x += self.v  # v в пикселях
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
+
+
 def create_map():
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
@@ -549,7 +595,7 @@ def create_map():
     TreeBranch(2500, 0, 1)
     TreeBranch(3000, 0, 2)
     FlowerPlatform(1000, 300, 2)
-    Wasp(1000, 150, 900, 1300)
+    Dragonfly(300, 150, 200, 400)
 
 
 background = load_image("background.png")
