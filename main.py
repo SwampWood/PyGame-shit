@@ -541,46 +541,37 @@ class Dragonfly(Enemy):
     enemy = load_image("Dragonfly.png")
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
 
-    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=6, v=3, health=150):
+    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=6, v=7, health=150, sleep=50):
         sheet = Dragonfly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.left_pos = left_pos
         self.right_pos = right_pos
         self.v = v
-        self.waves = 0
+        self.sleep = sleep
         self.x_pos = self.left_pos
         self.sound = Wasp.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
+
     def update(self, check):
         super().update(check)
-        print(self.waves)
-        if self.rect.x >= self.right_pos:
-            self.rotation = True
-            if not self.waves:
-                self.waves = 5
-                self.rect.y += 5
-                self.v = 1
-            else:
-                self.v = 3
-        elif self.rect.x <= self.left_pos:
-            self.rotation = False
-            if not self.waves:
-                self.waves = 5
-        if self.waves:
-            self.waves -=1
-            if self.waves % 2:
-                self.rect.y += 5
-            else:
-                self.rect.y -= 5
-        elif self.rotation:
-            self.rect.x -= self.v  # v в пикселях
+        if self.sleep:
+            self.sleep -= 1
         else:
-            self.rect.x += self.v  # v в пикселях
-        if abs(self.rect.x - player.rect.x) < 500:
-            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
-        else:
-            self.sound.set_volume(0)
+            if self.rotation:
+                self.rect.x += self.v  # v в пикселях
+            else:
+                self.rect.x -= self.v  # v в пикселях
+            if self.rect.x >= self.right_pos:
+                self.rotation = False
+                self.sleep = 50
+            elif self.rect.x <= self.left_pos:
+                self.rotation = True
+                self.sleep = 50
+            if abs(self.rect.x - player.rect.x) < 500:
+                self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+            else:
+                self.sound.set_volume(0)
 
 
 def create_map():
