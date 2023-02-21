@@ -192,7 +192,7 @@ class EndScreen:
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
-class StartScreeen:
+class StartScreen:
     def __init__(self):
         global background
         Text(400, 50, 50, 'PyGame-shit')
@@ -411,7 +411,7 @@ background = pygame.transform.scale(load_image("background.png"), (width, height
 player = Spider()
 score = Score()
 camera = Camera()
-StartScreeen()
+StartScreen()
 
 running = True
 while running:
