@@ -47,9 +47,11 @@ class Camera:
         obj.rect.x += self.dx
         if obj.__class__.__name__ == 'Web':
             obj.target = (obj.target[0] + self.dx, obj.target[1])
-        if obj.__class__.__name__ == 'Wasp' or obj.__class__.__name__ == 'Dragonfly':
+        if obj.__class__.__name__ == 'Wasp':
             obj.right_pos += self.dx
             obj.left_pos += self.dx
+        if obj.__class__.__name__ == 'Dragonfly':
+            obj.pos_args = [(x + self.dx, y, v) for x, y, v in obj.pos_args]
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -462,6 +464,7 @@ class Enemy(pygame.sprite.Sprite):
         self.health = health
         self.poison_damage = 0
         self.wait = 5
+        self.wait_max = 5
         self.frames = []
         self.cut_sheet(sheet, count)
         self.cur_frame = 0
@@ -488,7 +491,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.wait == 0:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
             self.image = pygame.transform.flip(self.frames[self.cur_frame], self.rotation, False)
-            self.wait = 5
+            self.wait = self.wait_max
         if not self.immunity_frames:
             for i in all_attacks:
                 if pygame.sprite.collide_mask(self, i):
@@ -516,7 +519,6 @@ class Wasp(Enemy):
         self.left_pos = left_pos
         self.right_pos = right_pos
         self.v = v
-        self.x_pos = self.left_pos
         self.sound = Wasp.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
@@ -539,17 +541,18 @@ class Wasp(Enemy):
 
 class Dragonfly(Enemy):
     enemy = load_image("Dragonfly.png")
-    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'dragonfly_sound.mp3'))
 
-    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=6, v=7, health=150, sleep=50):
+    def __init__(self, x, y, pos_args, sheet=None, count=6, health=120, sleep=50):
         sheet = Dragonfly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
-        self.left_pos = left_pos
-        self.right_pos = right_pos
-        self.v = v
+        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.wait = 3
+        self.wait_max = 3
         self.sleep = sleep
-        self.x_pos = self.left_pos
-        self.sound = Wasp.buzz
+        self.i = 0
+        self.v = self.pos_args[self.i][2]
+        self.sound = Dragonfly.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
 
@@ -558,20 +561,23 @@ class Dragonfly(Enemy):
         if self.sleep:
             self.sleep -= 1
         else:
-            if self.rotation:
-                self.rect.x += self.v  # v в пикселях
+            if self.v:
+                self.rect.x += (self.pos_args[self.i][0] - self.rect.x) // self.v
+                self.rect.y += (self.pos_args[self.i][1] - self.rect.y) // self.v
+                self.v -= 1
             else:
-                self.rect.x -= self.v  # v в пикселях
-            if self.rect.x >= self.right_pos:
+                self.rect.x, self.rect.y = self.pos_args[self.i][:2]
+                self.i = (self.i + 1) % len(self.pos_args)
+                self.v = self.pos_args[self.i][2]
+                self.sleep = 50
+            if self.rect.x >= self.pos_args[self.i][0]:
                 self.rotation = False
-                self.sleep = 50
-            elif self.rect.x <= self.left_pos:
+            elif self.rect.x <= self.pos_args[self.i][0]:
                 self.rotation = True
-                self.sleep = 50
-            if abs(self.rect.x - player.rect.x) < 500:
-                self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
-            else:
-                self.sound.set_volume(0)
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
 
 
 def create_map():
@@ -586,7 +592,7 @@ def create_map():
     TreeBranch(2500, 0, 1)
     TreeBranch(3000, 0, 2)
     FlowerPlatform(1000, 300, 2)
-    Dragonfly(300, 150, 200, 400)
+    Dragonfly(300, 150, [(450, 140, 20), (500, 340, 10), (300, 240, 30), (550, 240, 50), (400, 340, 20)])
 
 
 background = load_image("background.png")
