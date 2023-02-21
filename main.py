@@ -18,6 +18,8 @@ all_platforms = pygame.sprite.Group()
 all_branches = pygame.sprite.Group()
 all_attacks = pygame.sprite.Group()
 tree = pygame.sprite.Group()
+system_bars = pygame.sprite.Group()
+current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 
 
@@ -36,6 +38,32 @@ def load_image(name, colorkey=None):
         image = image.convert_alpha()
     return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
                                           image.get_size()[1] * (new_height + 100) / height))
+
+
+def create_map():
+    # Здесь откроем файл с картой и добавим все объекты
+    with open('map.txt') as file:
+        exec(file.read())
+
+
+def new_game():
+    global all_sprites, all_enemies, all_allies, all_platforms, tree
+    global system_bars, current_UI, horizontal_borders, player, score, background
+    all_sprites = pygame.sprite.Group()
+    all_enemies = pygame.sprite.Group()
+    all_allies = pygame.sprite.Group()
+    all_platforms = pygame.sprite.Group()
+    tree = pygame.sprite.Group()
+    system_bars = pygame.sprite.Group()
+    current_UI = pygame.sprite.Group()
+    horizontal_borders = pygame.sprite.Group()
+    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    player = Spider()
+    create_map()
+    Border(0, -2, 6624)
+    Border(0, 700, 6624)
+    HealthBar()
+    score = Score()
 
 
 class Camera:
@@ -98,6 +126,110 @@ class Particle(pygame.sprite.Sprite):
         # убиваем, если частица ушла за экран
         if self.velocity[1] >= 0 or self.velocity[0] == 0:
             self.kill()
+
+
+class Numbers(pygame.sprite.Sprite):
+    numbers = [load_image(str(i) + '.png') for i in range(10)]
+
+    def __init__(self, pos, num):
+        super().__init__(system_bars)
+        self.image = Numbers.numbers[int(num)]
+        self.rect = self.image.get_rect()
+        self.rect.x = 90 + pos * 50
+        self.rect.y = 20
+
+
+class Score:
+    def __init__(self):
+        self.score = 1000
+        self.wait = 60
+        self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
+
+    def __iadd__(self, other):
+        self.score += other
+        return self
+
+    def update(self):
+        for i in self.numbers:
+            i.kill()
+        self.wait -= 1
+        if self.wait == 0:
+            self.score = max(0, self.score - 1)
+            self.wait = 60
+        if self.score < 999999:
+            self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
+        else:
+            self.numbers = [Numbers(i + 12, '9') for i in range(6)]
+
+
+class Button(pygame.sprite.Sprite):
+    image = load_image("Button.png")
+
+    def __init__(self, x, y, height_, width_, text, func_=None):
+        super().__init__(current_UI)
+        text = Text(-50, -50, height_ - 10, text)
+        text.rect.x = x + (width_ - text.image.get_width()) // 2
+        text.rect.y = y
+        self.text = text
+        self.image = pygame.transform.scale(Button.image, (width_, height_))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.func = func_
+
+    def __call__(self):
+        if self.func:
+            self.func()
+
+
+class Text(pygame.sprite.Sprite):
+    def __init__(self, x, y, size_, text, color=(255, 255, 255)):
+        super().__init__(current_UI)
+        self.image = pygame.font.Font("data/ComicSansMSPixel.ttf", size_).render(text, True, color)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+class EndScreen:
+    def __init__(self):
+        global background
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
+        Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
+        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
+class StartScreen:
+    def __init__(self):
+        global background
+        Text(400, 50, 50, 'PyGame-shit')
+        Text(290, 100, 50, 'Отомсти за своего отца')
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
+        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
+class HealthBar(pygame.sprite.Sprite):
+    image = load_image("Heart.png")
+
+    def __init__(self):
+        super().__init__(system_bars)
+        self.health = str(player.health) if player.health < 1000 else '999'
+        self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
+        self.image = HealthBar.image
+        self.rect = self.image.get_rect()
+        self.rect.x = 20
+        self.rect.y = 20
+
+    def update(self):
+        if str(player.health) != self.health:
+            self.health = str(player.health) if player.health < 1000 else '999'
+            for i in self.numbers:
+                i.kill()
+            self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
 
 
 class Web(pygame.sprite.Sprite):
@@ -272,14 +404,14 @@ class Spider(pygame.sprite.Sprite):
         self.rect.x = 50
         self.rect.y = 400
         self.save_point = [50, 400]
-        self.health = 1000
+        self.health = 10
         self.current_sprite = None
         self.webbed = False
         self.web = None
 
     def respawn(self):
         if self.health == 1:
-            '''EndScreen()'''
+            EndScreen()
         else:
             self.immunity_frames = 60
             self.health -= 1
@@ -538,33 +670,19 @@ class Wasp(Enemy):
             self.sound.set_volume(0)
 
 
-def create_map():
-    # Здесь будем использовать различные классы для создания карты
-    enemy_flower = load_image('VenusFlyTrapAnimation.png')
-    TreeBorder()
-    FlowerPlatform(20, 500, 1)
-    FlowerPlatform(600, 400, 0)
-    FlowerPlatform(2000, 300, 2)
-    Enemy(750, 280, enemy_flower, 6)
-    TreeBranch(1500, 0, 0)
-    TreeBranch(2500, 0, 1)
-    TreeBranch(3000, 0, 2)
-    FlowerPlatform(1000, 300, 2)
-    Wasp(1000, 150, 900, 1300)
-
-
-background = load_image("background.png")
-create_map()
+background = pygame.transform.scale(load_image("background.png"), (width, height))
 player = Spider()
-b1 = Border(0, -2, 10024)
-b2 = Border(0, 700, 100024)
+score = Score()
 camera = Camera()
+StartScreen()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.03)
 sound.play(-1)
+
 running = True
 while running:
-    for event in pygame.event.get():
+    if not current_UI:
+        for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.VIDEORESIZE:
@@ -587,13 +705,30 @@ while running:
             player.attack_cd = 30
             Poison(event.pos)
 
-    screen.blit(background, (0, 0))
+      screen.blit(background, (0, 0))
 
-    all_sprites.draw(screen)
-    all_sprites.update(pygame.key.get_pressed())
-    camera.update(player)
-    for sprite in all_sprites:
-        camera.apply(sprite)
-    clock.tick(60)
-    pygame.display.flip()
+      all_sprites.draw(screen)
+      all_sprites.update(pygame.key.get_pressed())
+      camera.update(player)
+      for sprite in all_sprites:
+          camera.apply(sprite)
+      clock.tick(60)
+      pygame.display.flip()
+
+    else:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for sprite in current_UI:
+                    if sprite.__class__.__name__ == 'Button' and sprite.rect.collidepoint(event.pos):
+                        sprite()
+                        '''for j in current_UI:
+                            j.kill()
+                        current_UI = pygame.sprite.Group()'''
+
+        screen.blit(background, (0, 0))
+
+        current_UI.update()
+        current_UI.draw(screen)
 pygame.quit()
