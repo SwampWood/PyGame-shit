@@ -4,7 +4,6 @@ import random
 import pygame
 from math import atan2, sin, cos, degrees, radians
 
-
 pygame.init()
 clock = pygame.time.Clock()
 size = width, height = new_width, new_height = 1024, 600
@@ -234,7 +233,7 @@ class HealthBar(pygame.sprite.Sprite):
 
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
-    
+
     def __init__(self, target):
         super().__init__(all_sprites)
         self.add(all_allies)
@@ -299,7 +298,7 @@ class Web(pygame.sprite.Sprite):
 
 class Bite(pygame.sprite.Sprite):
     bite = load_image('Bite.png')
-    
+
     def __init__(self):
         super().__init__(all_sprites)
         self.add(all_attacks)
@@ -683,37 +682,39 @@ running = True
 while running:
     if not current_UI:
         for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.VIDEORESIZE:
-            new_width, new_height = event.w, event.h
-            background = load_image("background.png")
-            b2.rect.y = int(new_height * 1.17)
-            for j in all_sprites:
-                if j not in horizontal_borders:
-                    j.kill()
-            create_map()
-            player = Spider()
-            surface = pygame.display.set_mode((new_width, new_height),
-                                              pygame.RESIZABLE)
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
-            player.web = Web(pygame.mouse.get_pos())
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
-            player.attack_cd = 30
-            Bite()
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
-            player.attack_cd = 30
-            Poison(event.pos)
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.VIDEORESIZE:
+                new_width, new_height = event.w, event.h
+                background = load_image("background.png")
+                '''b2.rect.y = int(new_height * 1.17)'''
+                for j in all_sprites:
+                    if j not in horizontal_borders:
+                        j.kill()
+                create_map()
+                player = Spider()
+                surface = pygame.display.set_mode((new_width, new_height),
+                                                  pygame.RESIZABLE)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
+                player.web = Web(pygame.mouse.get_pos())
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
+                player.attack_cd = 30
+                Bite()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
+                player.attack_cd = 30
+                Poison(event.pos)
 
-      screen.blit(background, (0, 0))
+        screen.blit(background, (0, 0))
 
-      all_sprites.draw(screen)
-      all_sprites.update(pygame.key.get_pressed())
-      camera.update(player)
-      for sprite in all_sprites:
-          camera.apply(sprite)
-      clock.tick(60)
-      pygame.display.flip()
+        screen.blit(background, (0, 0))
+        all_sprites.draw(screen)
+        system_bars.draw(screen)
+        score.update()
+        all_sprites.update(pygame.key.get_pressed())
+        system_bars.update()
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
 
     else:
         for event in pygame.event.get():
@@ -731,4 +732,6 @@ while running:
 
         current_UI.update()
         current_UI.draw(screen)
+    clock.tick(60)
+    pygame.display.flip()
 pygame.quit()
