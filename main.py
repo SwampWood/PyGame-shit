@@ -7,7 +7,7 @@ from math import atan2, sin, cos, degrees, radians
 pygame.init()
 clock = pygame.time.Clock()
 size = width, height = new_width, new_height = 1024, 600
-screen = pygame.display.set_mode(size, pygame.RESIZABLE)
+screen = pygame.display.set_mode((new_width, new_height))
 screen.fill(pygame.Color('blue'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
@@ -20,6 +20,8 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
+fullscreen = False
+is_paused = False
 
 
 def load_image(name, colorkey=None):
@@ -63,6 +65,12 @@ def new_game():
     Border(0, 700, 6624)
     HealthBar()
     score = Score()
+
+
+def clear_UI():
+    global background, current_UI
+    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    current_UI = pygame.sprite.Group()
 
 
 class Camera:
@@ -180,10 +188,18 @@ class Button(pygame.sprite.Sprite):
         if self.func:
             self.func()
 
+    def change_text(self, text):
+        self.text.kill()
+        text = Text(-50, -50, self.rect.height - 10, text)
+        text.rect.x = self.rect.x + (self.rect.width - text.image.get_width()) // 2
+        text.rect.y = self.rect.y
+        self.text = text
+
 
 class Text(pygame.sprite.Sprite):
     def __init__(self, x, y, size_, text, color=(255, 255, 255)):
         super().__init__(current_UI)
+        self.text = text
         self.image = pygame.font.Font("data/ComicSansMSPixel.ttf", size_).render(text, True, color)
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -200,14 +216,47 @@ class EndScreen:
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
+class Settings:
+    def __init__(self, prev):
+        global background, current_UI
+        current_UI = pygame.sprite.Group()
+        Text(400, 50, 50, 'Настройки')
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        self.changescreen = Button(270, 200, 50, 500, 'Оконный режим' if fullscreen else 'Полноэкранный режим',
+                                   func_=lambda: Settings.fullscreen(self))
+        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 400, 50, 500, 'Назад', func_=lambda: prev())
+
+    def fullscreen(self):
+        global fullscreen
+        if self.changescreen.text.text == 'Полноэкранный режим':
+            self.changescreen.change_text('Оконный режим')
+        else:
+            self.changescreen.change_text('Полноэкранный режим')
+        fullscreen = not fullscreen
+        pygame.display.toggle_fullscreen()
+
+
+class Pause:
+    def __init__(self):
+        global background
+        clear_UI()
+        Text(430, 50, 60, 'Пауза')
+        background = gameplay_background
+        Button(270, 200, 50, 500, 'Продолжить', func_=clear_UI)
+        Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(Pause))
+        Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
 class StartScreen:
     def __init__(self):
         global background
+        clear_UI()
         Text(400, 50, 50, 'PyGame-shit')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
-        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
@@ -684,17 +733,9 @@ while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.VIDEORESIZE:
-                new_width, new_height = event.w, event.h
-                background = load_image("background.png")
-                '''b2.rect.y = int(new_height * 1.17)'''
-                for j in all_sprites:
-                    if j not in horizontal_borders:
-                        j.kill()
-                create_map()
-                player = Spider()
-                surface = pygame.display.set_mode((new_width, new_height),
-                                                  pygame.RESIZABLE)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                is_paused = True
+                Pause()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
                 player.web = Web(pygame.mouse.get_pos())
             if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
@@ -715,6 +756,7 @@ while running:
         camera.update(player)
         for sprite in all_sprites:
             camera.apply(sprite)
+        gameplay_background = screen.copy()
 
     else:
         for event in pygame.event.get():
@@ -724,9 +766,9 @@ while running:
                 for sprite in current_UI:
                     if sprite.__class__.__name__ == 'Button' and sprite.rect.collidepoint(event.pos):
                         sprite()
-                        '''for j in current_UI:
-                            j.kill()
-                        current_UI = pygame.sprite.Group()'''
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and is_paused:
+                is_paused = False
+                clear_UI()
 
         screen.blit(background, (0, 0))
 
