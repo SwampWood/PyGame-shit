@@ -4,11 +4,10 @@ import random
 import pygame
 from math import atan2, sin, cos, degrees, radians
 
-
 pygame.init()
 clock = pygame.time.Clock()
-size = width, height = 1024, 600
-screen = pygame.display.set_mode(size)
+size = width, height = new_width, new_height = 1024, 600
+screen = pygame.display.set_mode((new_width, new_height))
 screen.fill(pygame.Color('blue'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
@@ -21,6 +20,8 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
+fullscreen = False
+is_paused = False
 
 
 def load_image(name, colorkey=None):
@@ -36,7 +37,40 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
-    return image
+    return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
+                                          image.get_size()[1] * (new_height + 100) / height))
+
+
+def create_map():
+    # Здесь откроем файл с картой и добавим все объекты
+    with open('map.txt') as file:
+        exec(file.read())
+
+
+def new_game():
+    global all_sprites, all_enemies, all_allies, all_platforms, tree
+    global system_bars, current_UI, horizontal_borders, player, score, background
+    all_sprites = pygame.sprite.Group()
+    all_enemies = pygame.sprite.Group()
+    all_allies = pygame.sprite.Group()
+    all_platforms = pygame.sprite.Group()
+    tree = pygame.sprite.Group()
+    system_bars = pygame.sprite.Group()
+    current_UI = pygame.sprite.Group()
+    horizontal_borders = pygame.sprite.Group()
+    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    player = Spider()
+    create_map()
+    Border(0, -2, 6624)
+    Border(0, 700, 6624)
+    HealthBar()
+    score = Score()
+
+
+def clear_UI():
+    global background, current_UI
+    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    current_UI = pygame.sprite.Group()
 
 def create_map():
     # Здесь откроем файл с картой и добавим все объекты
@@ -179,9 +213,18 @@ class Button(pygame.sprite.Sprite):
             self.func()
 
 
+    def change_text(self, text):
+        self.text.kill()
+        text = Text(-50, -50, self.rect.height - 10, text)
+        text.rect.x = self.rect.x + (self.rect.width - text.image.get_width()) // 2
+        text.rect.y = self.rect.y
+        self.text = text
+
+
 class Text(pygame.sprite.Sprite):
     def __init__(self, x, y, size_, text, color=(255, 255, 255)):
         super().__init__(current_UI)
+        self.text = text
         self.image = pygame.font.Font("data/ComicSansMSPixel.ttf", size_).render(text, True, color)
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -198,14 +241,47 @@ class EndScreen:
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
-class StartScreeen:
+class Settings:
+    def __init__(self, prev):
+        global background, current_UI
+        current_UI = pygame.sprite.Group()
+        Text(400, 50, 50, 'Настройки')
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        self.changescreen = Button(270, 200, 50, 500, 'Оконный режим' if fullscreen else 'Полноэкранный режим',
+                                   func_=lambda: Settings.fullscreen(self))
+        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 400, 50, 500, 'Назад', func_=lambda: prev())
+
+    def fullscreen(self):
+        global fullscreen
+        if self.changescreen.text.text == 'Полноэкранный режим':
+            self.changescreen.change_text('Оконный режим')
+        else:
+            self.changescreen.change_text('Полноэкранный режим')
+        fullscreen = not fullscreen
+        pygame.display.toggle_fullscreen()
+
+
+class Pause:
     def __init__(self):
         global background
+        clear_UI()
+        Text(430, 50, 60, 'Пауза')
+        background = gameplay_background
+        Button(270, 200, 50, 500, 'Продолжить', func_=clear_UI)
+        Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(Pause))
+        Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
+class StartScreen:
+    def __init__(self):
+        global background
+        clear_UI()
         Text(400, 50, 50, 'PyGame-shit')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
-        Button(270, 300, 50, 500, 'Настройки')
+        Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
@@ -228,9 +304,10 @@ class HealthBar(pygame.sprite.Sprite):
                 i.kill()
             self.numbers = [Numbers(i, self.health[i]) for i in range(len(self.health))]
 
+
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
-    
+
     def __init__(self, target):
         super().__init__(all_sprites)
         self.add(all_allies)
@@ -295,7 +372,7 @@ class Web(pygame.sprite.Sprite):
 
 class Bite(pygame.sprite.Sprite):
     bite = load_image('Bite.png')
-    
+
     def __init__(self):
         super().__init__(all_sprites)
         self.add(all_attacks)
@@ -400,7 +477,7 @@ class Spider(pygame.sprite.Sprite):
         self.rect.x = 50
         self.rect.y = 400
         self.save_point = [50, 400]
-        self.health = 1000
+        self.health = 10
         self.current_sprite = None
         self.webbed = False
         self.web = None
@@ -707,7 +784,10 @@ background = pygame.transform.scale(load_image("background.png"), (width, height
 player = Spider()
 score = Score()
 camera = Camera()
-StartScreeen()
+StartScreen()
+sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
+sound.set_volume(0.03)
+sound.play(-1)
 
 running = True
 while running:
@@ -715,6 +795,9 @@ while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                is_paused = True
+                Pause()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
                 player.web = Web(pygame.mouse.get_pos())
                 web_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'web_soundeffect.mp3'))
@@ -735,17 +818,16 @@ while running:
                 Poison(event.pos)
 
         screen.blit(background, (0, 0))
-
         all_sprites.draw(screen)
-        all_sprites.update(pygame.key.get_pressed())
-
         system_bars.draw(screen)
         score.update()
+        all_sprites.update(pygame.key.get_pressed())
+        system_bars.update()
         camera.update(player)
-
         for sprite in all_sprites:
             camera.apply(sprite)
-        clock.tick(60)
+        gameplay_background = screen.copy()
+
     else:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -754,14 +836,14 @@ while running:
                 for sprite in current_UI:
                     if sprite.__class__.__name__ == 'Button' and sprite.rect.collidepoint(event.pos):
                         sprite()
-                        '''for j in current_UI:
-                            j.kill()
-                        current_UI = pygame.sprite.Group()'''
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and is_paused:
+                is_paused = False
+                clear_UI()
 
         screen.blit(background, (0, 0))
 
         current_UI.update()
         current_UI.draw(screen)
-
+    clock.tick(60)
     pygame.display.flip()
 pygame.quit()
