@@ -6,8 +6,8 @@ from math import atan2, sin, cos, degrees, radians
 
 pygame.init()
 clock = pygame.time.Clock()
-size = width, height = new_width, new_height = 1024, 600
-screen = pygame.display.set_mode((new_width, new_height))
+size = width, height = 1024, 600
+screen = pygame.display.set_mode(size)
 screen.fill(pygame.Color('blue'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
@@ -20,6 +20,7 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
+full_size = pygame.display.list_modes()[0]
 fullscreen = False
 is_paused = False
 
@@ -37,8 +38,8 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
-    return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
-                                          image.get_size()[1] * (new_height + 100) / height))
+    return pygame.transform.scale(image, (image.get_size()[0] * (width + 50) / width,
+                                          image.get_size()[1] * (height + 100) / height))
 
 
 def create_map():
@@ -61,8 +62,8 @@ def new_game():
     background = pygame.transform.scale(load_image("background.png"), (width, height))
     player = Spider()
     create_map()
-    Border(0, -2, 6624)
-    Border(0, 700, 6624)
+    Border(-1000, -2, 10624)
+    Border(-1000, 700, 10624)
     HealthBar()
     score = Score()
 
@@ -71,30 +72,6 @@ def clear_UI():
     global background, current_UI
     background = pygame.transform.scale(load_image("background.png"), (width, height))
     current_UI = pygame.sprite.Group()
-
-def create_map():
-    # Здесь откроем файл с картой и добавим все объекты
-    with open('map.txt') as file:
-        exec(file.read())
-
-def new_game():
-    global all_sprites, all_enemies, all_allies, all_platforms, tree
-    global system_bars, current_UI, horizontal_borders, player, score, background
-    all_sprites = pygame.sprite.Group()
-    all_enemies = pygame.sprite.Group()
-    all_allies = pygame.sprite.Group()
-    all_platforms = pygame.sprite.Group()
-    tree = pygame.sprite.Group()
-    system_bars = pygame.sprite.Group()
-    current_UI = pygame.sprite.Group()
-    horizontal_borders = pygame.sprite.Group()
-    background = pygame.transform.scale(load_image("background.png"), (width, height))
-    player = Spider()
-    create_map()
-    Border(0, -2, 6624)
-    Border(0, 700, 6624)
-    HealthBar()
-    score = Score()
 
 
 class Camera:
@@ -123,7 +100,7 @@ class Border(pygame.sprite.Sprite):
         super().__init__(all_sprites)
         self.add(horizontal_borders)
         self.image = pygame.Surface([x2 - x1, 1])
-        self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+        self.rect = pygame.Rect(x1, int(y1 * height / 600), x2 - x1, 1)
 
 
 class Particle(pygame.sprite.Sprite):
@@ -138,7 +115,7 @@ class Particle(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
         # у каждой частицы своя скорость — это вектор
-        self.velocity = [dx, dy]
+        self.velocity = [int(dx * width / 1024), int(dy * height / 600)]
         # и свои координаты
         self.rect.x, self.rect.y = pos
 
@@ -174,7 +151,7 @@ class Score:
     def __init__(self):
         self.score = 1000
         self.wait = 60
-        self.numbers = [Numbers(i + 12, str(self.score).zfill(6)[i]) for i in range(6)]
+        self.numbers = [Numbers(i + int(12 * width / 1024), str(self.score).zfill(6)[i]) for i in range(6)]
 
     def __iadd__(self, other):
         self.score += other
@@ -211,7 +188,6 @@ class Button(pygame.sprite.Sprite):
     def __call__(self):
         if self.func:
             self.func()
-
 
     def change_text(self, text):
         self.text.kill()
@@ -253,12 +229,15 @@ class Settings:
         Button(270, 400, 50, 500, 'Назад', func_=lambda: prev())
 
     def fullscreen(self):
-        global fullscreen
+        global fullscreen, screen, width, height
         if self.changescreen.text.text == 'Полноэкранный режим':
             self.changescreen.change_text('Оконный режим')
+            width, height = full_size
         else:
             self.changescreen.change_text('Полноэкранный режим')
+            width, height = size
         fullscreen = not fullscreen
+        screen = pygame.display.set_mode((width, height))
         pygame.display.toggle_fullscreen()
 
 
