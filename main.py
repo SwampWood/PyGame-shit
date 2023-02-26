@@ -430,6 +430,29 @@ class TreeBorder(pygame.sprite.Sprite):
         self.rect.y = -100
 
 
+class RockPlatform(pygame.sprite.Sprite):
+    image = load_image("Rock_Platform1.png")
+    landing = pygame.mixer.Sound(os.path.join('data', 'music', f'rock_landing.mp3'))
+
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.add(all_platforms)
+        self.image = RockPlatform.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self, check):
+        if not self.particles and pygame.sprite.collide_mask(self, player) and player.current_sprite != self:
+            self.particles = True
+            RockPlatform.landing.set_volume(0.05)
+            RockPlatform.landing.play(0)
+        elif not pygame.sprite.collide_mask(self, player):
+            self.particles = False
+
+
 class FlowerPlatform(pygame.sprite.Sprite):
     images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
               load_image("Platforms3.png"), load_image("Platforms1.png")]
