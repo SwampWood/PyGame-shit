@@ -241,6 +241,9 @@ class Poison(pygame.sprite.Sprite):
         for i in all_platforms:
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
+        for i in all_enemies:
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
         if pygame.sprite.spritecollideany(self, horizontal_borders) or pygame.sprite.spritecollideany(self, tree):
             self.kill()
         self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
