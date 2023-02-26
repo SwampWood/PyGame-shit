@@ -41,6 +41,7 @@ class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
         self.dx = 0
+        self.boss = False
 
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
@@ -55,8 +56,18 @@ class Camera:
 
     # позиционировать камеру на объекте target
     def update(self, target):
-        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-        player.save_point[0] += self.dx
+        if not self.boss:
+            self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+            player.save_point[0] += self.dx
+        else:
+            self.dx = -(target.rect.x - width // 8)
+            player.save_point[0] += self.dx
+
+    def BossCamTurn(self):
+        if self.boss:
+            self.boss = False
+        else:
+            self.boss = True
 
 
 class Border(pygame.sprite.Sprite):
@@ -588,14 +599,8 @@ def create_map():
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
     TreeBorder()
     FlowerPlatform(20, 500, 1)
-    FlowerPlatform(600, 400, 0)
-    FlowerPlatform(2000, 300, 2)
-    Enemy(750, 280, enemy_flower, 6)
-    TreeBranch(1500, 0, 0)
-    TreeBranch(2500, 0, 1)
-    TreeBranch(3000, 0, 2)
-    FlowerPlatform(1000, 300, 2)
-    Dragonfly(300, 150, [(450, 140, 20), (500, 340, 10), (300, 240, 30), (550, 240, 50), (400, 340, 20)])
+    FlowerPlatform(600, 350, 0)
+    FlowerPlatform(1000, 500, 1)
 
 
 background = load_image("background.png")
@@ -610,6 +615,7 @@ sound.play(-1)
 running = True
 while running:
     for event in pygame.event.get():
+        keys = pygame.key.get_pressed()
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
@@ -630,6 +636,8 @@ while running:
             poison_sound.set_volume(0.2)
             poison_sound.play(0)
             Poison(event.pos)
+        if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
+            camera.BossCamTurn()
 
     screen.blit(background, (0, 0))
 
