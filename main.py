@@ -53,6 +53,8 @@ class Camera:
             obj.left_pos += self.dx
         if obj.__class__.__name__ == 'Dragonfly':
             obj.pos_args = [(x + self.dx, y, v) for x, y, v in obj.pos_args]
+        if obj.__class__.__name__ == 'BossFirstPhase':
+            obj.pos_args = [(x + self.dx, y, v) for x, y, v in obj.pos_args]
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -617,13 +619,56 @@ class Dragonfly(Enemy):
             self.sound.set_volume(0)
 
 
+class BossFirstPhase(Enemy):
+    enemy = load_image("Dragonfly.png")
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
+    def __init__(self, x, y, pos_args, sheet=None, count=6, health=2000, sleep=50):
+        sheet = Dragonfly.enemy if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.wait = 3
+        self.wait_max = 3
+        self.sleep = sleep
+        self.i = 0
+        self.v = self.pos_args[self.i][2]
+        self.sound = Dragonfly.buzz
+        self.sound.set_volume(0)
+        self.sound.play(-1)
+    def update(self, check):
+        super().update(check)
+        if self.sleep:
+            self.sleep -= 1
+        else:
+            if self.v:
+                self.rect.x += (self.pos_args[self.i][0] - self.rect.x) // self.v
+                self.rect.y += (self.pos_args[self.i][1] - self.rect.y) // self.v
+                self.v -= 1
+            else:
+                self.rect.x, self.rect.y = self.pos_args[self.i][:2]
+                self.i = (self.i + random.randint(1, 5)) % len(self.pos_args)
+                self.v = self.pos_args[self.i][2]
+                self.sleep = 50
+            if self.rect.x >= self.pos_args[self.i][0]:
+                self.rotation = False
+            elif self.rect.x <= self.pos_args[self.i][0]:
+                self.rotation = True
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
+
+
 def create_map():
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
     TreeBorder()
-    FlowerPlatform(20, 500, 1)
-    FlowerPlatform(600, 350, 0)
-    FlowerPlatform(1000, 500, 1)
+    RockPlatform(20, 500)
+    RockPlatform(400, 400)
+    RockPlatform(800, 300)
+    RockPlatform(1000, 500)
+    RockPlatform(1000, 100)
+    positons = [(1200, 475, 5), (1200, 75, 5), (1300, 300, 5), (1500, 475, 5), (1500, 75, 5)]
+    BossFirstPhase(1300, 300, positons)
 
 
 background = load_image("background.png")
