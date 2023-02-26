@@ -123,7 +123,7 @@ class Web(pygame.sprite.Sprite):
         self.length = 13
         self.wait = 5
         # зададим угол, под которым находится цель
-        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512))) + 270
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - player.rect.x - 20))) + 270
         if target[0] - 512 < 0:
             self.x_negative = -1
         else:
@@ -156,7 +156,8 @@ class Web(pygame.sprite.Sprite):
                     player.web = None
                     self.kill()
                 else:
-                    self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]), (self.target[0] - 512))) + 270
+                    self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]),
+                                               (self.target[0] - player.rect.x - 20))) + 270
                     self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
                     self.length += 15
 
@@ -231,7 +232,7 @@ class Poison(pygame.sprite.Sprite):
         self.frames = []
         self.cut_sheet(Poison.poison, 4)
         self.cur_frame = 0
-        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512)))
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - player.rect.x - 20)))
         self.x_velocity = int(cos(radians(self.angle)) * 20)
 
         self.y_velocity = -int(sin(radians(self.angle)) * 20)
@@ -432,6 +433,19 @@ class TreeBorder(pygame.sprite.Sprite):
         self.rect.y = -100
 
 
+class RockWall(pygame.sprite.Sprite):
+    image = load_image("Cave_wall.png")
+
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.image = RockWall.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x
+        self.rect.y = y
+
+
 class RockPlatform(pygame.sprite.Sprite):
     image = load_image("Rock_Platform1.png")
     landing = pygame.mixer.Sound(os.path.join('data', 'music', f'rock_landing.mp3'))
@@ -449,7 +463,7 @@ class RockPlatform(pygame.sprite.Sprite):
     def update(self, check):
         if not self.particles and pygame.sprite.collide_mask(self, player) and player.current_sprite != self:
             self.particles = True
-            RockPlatform.landing.set_volume(0.05)
+            RockPlatform.landing.set_volume(0.4)
             RockPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
@@ -622,6 +636,7 @@ class Dragonfly(Enemy):
 class BossFirstPhase(Enemy):
     enemy = load_image("Dragonfly.png")
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
+
     def __init__(self, x, y, pos_args, sheet=None, count=6, health=2000, sleep=50):
         sheet = Dragonfly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
@@ -634,6 +649,7 @@ class BossFirstPhase(Enemy):
         self.sound = Dragonfly.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
+
     def update(self, check):
         super().update(check)
         if self.sleep:
@@ -662,6 +678,7 @@ def create_map():
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
     TreeBorder()
+    RockWall(10, -20)
     RockPlatform(20, 500)
     RockPlatform(400, 400)
     RockPlatform(800, 300)
