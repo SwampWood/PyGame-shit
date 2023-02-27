@@ -680,11 +680,11 @@ class Fly(Enemy):
 
 
 class BossFirstPhase(Enemy):
-    enemy = load_image("Dragonfly.png")
+    enemy = pygame.transform.scale(load_image("SpiderIdleFront2.png"), (80, 80))
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
 
-    def __init__(self, x, y, pos_args, sheet=None, count=6, health=1000, sleep=50):
-        sheet = Dragonfly.enemy if not sheet else sheet
+    def __init__(self, x, y, pos_args, sheet=None, count=1, health=1000, sleep=50):
+        sheet = BossFirstPhase.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.pos_args = pos_args  # список корежей с координатами и скоростями
         self.wait = 3
