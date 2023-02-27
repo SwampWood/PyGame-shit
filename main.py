@@ -14,6 +14,7 @@ pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
+all_player = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 all_branches = pygame.sprite.Group()
 all_attacks = pygame.sprite.Group()
@@ -62,7 +63,7 @@ class Camera:
             self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
             player.save_point[0] += self.dx
         else:
-            self.dx = -(target.rect.x - width // 8)
+            self.dx = -(target.rect.x - width // 6)
             player.save_point[0] += self.dx
 
     def BossCamTurn(self):
@@ -390,7 +391,11 @@ class Spider(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, all_enemies) and not self.immunity_frames:
             for enemy in all_enemies:
                 if pygame.sprite.collide_mask(self, enemy):
-                    self.respawn()
+                    if enemy.__class__.__name__ == "Fly":
+                        'self.health += 1'
+                        enemy.kill()
+                    else:
+                        self.respawn()
         if pygame.sprite.spritecollideany(self, horizontal_borders) and self.rect.y < 5:
             self.y_velocity = abs(self.y_velocity) // 2
             self.going_up = False
@@ -633,6 +638,15 @@ class Dragonfly(Enemy):
             self.sound.set_volume(0)
 
 
+class Fly(Enemy):
+    enemy = load_image("Black_Fly.png")
+    def __init__(self, x, y, sheet=None, count=1, health=1):
+        sheet = Fly.enemy if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+    def update(self, check):
+        super().update(check)
+
+
 class BossFirstPhase(Enemy):
     enemy = load_image("Dragonfly.png")
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
@@ -677,13 +691,14 @@ class BossFirstPhase(Enemy):
 def create_map():
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
+    RockWall(-150, -20)
     TreeBorder()
-    RockWall(10, -20)
     RockPlatform(20, 500)
     RockPlatform(400, 400)
     RockPlatform(800, 300)
     RockPlatform(1000, 500)
     RockPlatform(1000, 100)
+    Fly(400, 350)
     positons = [(1200, 475, 5), (1200, 75, 5), (1300, 300, 5), (1500, 475, 5), (1500, 75, 5)]
     BossFirstPhase(1300, 300, positons)
 
