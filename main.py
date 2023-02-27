@@ -14,7 +14,7 @@ pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
-all_player = pygame.sprite.Group()
+all_projectiles = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 all_branches = pygame.sprite.Group()
 all_attacks = pygame.sprite.Group()
@@ -267,6 +267,29 @@ class Poison(pygame.sprite.Sprite):
         self.rect.y += self.y_velocity
 
 
+class Stalactite(pygame.sprite.Sprite):
+    stalactite = pygame.transform.scale(load_image('Stalactite.png'), (20, 60))
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.add(all_projectiles)
+        self.damage = 50
+        self.image = Stalactite.stalactite
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(random.randint(0, width), 0)
+        self.gravity = 5
+
+    def update(self, check):
+        self.rect = self.rect.move(0, self.gravity)
+        for i in all_enemies:
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
+        for attack in all_attacks:
+            if pygame.sprite.collide_mask(self, attack):
+                self.kill()
+                attack.kill()
+
+
 class Spider(pygame.sprite.Sprite):
     images_movement_right = [load_image("SpiderWalking1.png"), load_image("SpiderWalking2.png"),
                              load_image("SpiderWalking3.png"), load_image("SpiderWalking4.png")]
@@ -396,6 +419,12 @@ class Spider(pygame.sprite.Sprite):
                         enemy.kill()
                     else:
                         self.respawn()
+        if pygame.sprite.spritecollideany(self, all_projectiles) and not self.immunity_frames:
+            for i in all_projectiles:
+                if pygame.sprite.collide_mask(self, i):
+                    'self.health -= i.damage'
+                    self.respawn()
+                    i.kill()
         if pygame.sprite.spritecollideany(self, horizontal_borders) and self.rect.y < 5:
             self.y_velocity = abs(self.y_velocity) // 2
             self.going_up = False
@@ -560,6 +589,10 @@ class Enemy(pygame.sprite.Sprite):
                         player.health += 1
                     elif i.__class__.__name__ == 'Poison':
                         self.poison_damage = 40
+                for i in all_projectiles:
+                    if pygame.sprite.collide_mask(self, i):
+                        self.health -= i.damage
+                        self.immunity_frames = 60
 
         if self.health <= 0:
             if self.sound:
@@ -640,18 +673,17 @@ class Dragonfly(Enemy):
 
 class Fly(Enemy):
     enemy = load_image("Black_Fly.png")
+
     def __init__(self, x, y, sheet=None, count=1, health=1):
         sheet = Fly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
-    def update(self, check):
-        super().update(check)
 
 
 class BossFirstPhase(Enemy):
     enemy = load_image("Dragonfly.png")
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
 
-    def __init__(self, x, y, pos_args, sheet=None, count=6, health=2000, sleep=50):
+    def __init__(self, x, y, pos_args, sheet=None, count=6, health=1000, sleep=50):
         sheet = Dragonfly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.pos_args = pos_args  # список корежей с координатами и скоростями
@@ -699,7 +731,7 @@ def create_map():
     RockPlatform(1000, 500)
     RockPlatform(1000, 100)
     Fly(400, 350)
-    positons = [(1200, 475, 5), (1200, 75, 5), (1300, 300, 5), (1500, 475, 5), (1500, 75, 5)]
+    positons = [(1200, 475, 40), (1200, 75, 40), (1300, 300, 40), (1500, 475, 40), (1500, 75, 40)]
     BossFirstPhase(1300, 300, positons)
 
 
@@ -738,6 +770,8 @@ while running:
             Poison(event.pos)
         if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
             camera.BossCamTurn()
+        if random.randint(1, 20) == 7:
+            Stalactite()
 
     screen.blit(background, (0, 0))
 
