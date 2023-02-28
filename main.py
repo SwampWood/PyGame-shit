@@ -784,6 +784,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.rect.move(x, y)
         self.sound = None
         self.immunity_frames = 0
+        self.cost = 50  # сколько очков добавляем за убийство
 
     def cut_sheet(self, sheet, columns):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -818,6 +819,7 @@ class Enemy(pygame.sprite.Sprite):
             if self.sound:
                 self.sound.fadeout(500)
             self.kill()
+            score.score += self.cost
 
 
 class Wasp(Enemy):
@@ -833,6 +835,7 @@ class Wasp(Enemy):
         self.sound = Wasp.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
+        self.cost = 150
 
     def update(self, check):
         super().update(check)
@@ -866,6 +869,7 @@ class Dragonfly(Enemy):
         self.sound = Dragonfly.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
+        self.cost = 200
 
     def update(self, check):
         super().update(check)
@@ -897,6 +901,7 @@ class Fly(Enemy):
     def __init__(self, x, y, sheet=None, count=1, health=1):
         sheet = Fly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
+        self.cost = 100
 
 
 class BossFirstPhase(Enemy):
@@ -915,6 +920,7 @@ class BossFirstPhase(Enemy):
         self.sound = Dragonfly.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
+        self.cost = 1000
 
     def update(self, check):
         super().update(check)
@@ -976,11 +982,6 @@ while running:
                 Poison(event.pos)
             if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
                 camera.BossCamTurn()
-            """
-            if not count % 40:
-                Stalactite()
-            count += 1
-            """
 
         screen.blit(background, (0, 0))
         all_sprites.draw(screen)
