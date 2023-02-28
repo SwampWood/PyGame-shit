@@ -88,7 +88,7 @@ class Particle(pygame.sprite.Sprite):
     for scale in (1, 2, 3):
         fire.append(pygame.transform.scale(fire[0], (scale, scale)))
 
-    def __init__(self, pos, dx, dy):
+    def __init__(self, pos, dx, dy, gravity=-0.5):
         super().__init__(all_sprites)
         self.image = random.choice(self.fire)
         self.rect = self.image.get_rect()
@@ -98,8 +98,9 @@ class Particle(pygame.sprite.Sprite):
         # и свои координаты
         self.rect.x, self.rect.y = pos
 
-        # гравитация будет одинаковой (значение константы)
-        self.gravity = -0.5
+        # гравитация будет одинаковой (значение константы) (нет)
+        self.gravity = gravity
+
 
     def update(self, check):
         # применяем гравитационный эффект:
@@ -111,9 +112,23 @@ class Particle(pygame.sprite.Sprite):
         self.rect.x += int(self.velocity[0])
         self.rect.y += int(self.velocity[1])
         # убиваем, если частица ушла за экран
-        if self.velocity[1] >= 0 or self.velocity[0] == 0:
+        if self.velocity[1] == 0 or self.velocity[0] == 0:
             self.kill()
 
+
+class StalactiteParticle(Particle):
+    fire = [load_image('dirt.png')]
+    def __init__(self, pos, dx, dy, gravity=0.5):
+        super().__init__(pos, dx, dy, gravity)
+        self.randomheight = random.randint(height // 48, height // 12)
+    def update(self, check):
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if self.rect.y > self.randomheight:
+            self.kill()
 
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
@@ -276,18 +291,25 @@ class Stalactite(pygame.sprite.Sprite):
         self.image = Stalactite.stalactite
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.rect = self.rect.move(random.randint(0, width), 0)
+        self.rect = self.rect.move(random.randint(0, width), -60)
         self.gravity = 5
+        self.wait = 40
 
     def update(self, check):
-        self.rect = self.rect.move(0, self.gravity)
-        for i in all_enemies:
-            if pygame.sprite.collide_mask(self, i):
-                self.kill()
-        for attack in all_attacks:
-            if pygame.sprite.collide_mask(self, attack):
-                self.kill()
-                attack.kill()
+        if self.wait:
+            StalactiteParticle((self.rect.x, 0), random.randint(-1, 1), random.randint(0, 1), gravity=0.5)
+            self.wait -= 1
+        else:
+            self.rect = self.rect.move(0, self.gravity)
+            for i in all_enemies:
+                if pygame.sprite.collide_mask(self, i):
+                    i.health -= self.damage
+                    i.immunity_frames = 60
+                    self.kill()
+            for attack in all_attacks:
+                if pygame.sprite.collide_mask(self, attack):
+                    self.kill()
+                    attack.kill()
 
 
 class Spider(pygame.sprite.Sprite):
@@ -589,10 +611,6 @@ class Enemy(pygame.sprite.Sprite):
                         player.health += 1
                     elif i.__class__.__name__ == 'Poison':
                         self.poison_damage = 40
-                for i in all_projectiles:
-                    if pygame.sprite.collide_mask(self, i):
-                        self.health -= i.damage
-                        self.immunity_frames = 60
 
         if self.health <= 0:
             if self.sound:
@@ -683,7 +701,7 @@ class BossFirstPhase(Enemy):
     enemy = pygame.transform.scale(load_image("SpiderIdleFront2.png"), (80, 80))
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
 
-    def __init__(self, x, y, pos_args, sheet=None, count=1, health=1000, sleep=50):
+    def __init__(self, x, y, pos_args, sheet=None, count=1, health=2000, sleep=50):
         sheet = BossFirstPhase.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.pos_args = pos_args  # список корежей с координатами и скоростями
@@ -745,6 +763,7 @@ sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3')
 sound.set_volume(0.05)
 sound.play(-1)
 running = True
+count = 0
 while running:
     for event in pygame.event.get():
         keys = pygame.key.get_pressed()
@@ -770,8 +789,9 @@ while running:
             Poison(event.pos)
         if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
             camera.BossCamTurn()
-        if random.randint(1, 20) == 7:
+        if not count % 40:
             Stalactite()
+        count += 1
 
     screen.blit(background, (0, 0))
 
