@@ -4,6 +4,7 @@ import random
 import pygame
 from math import atan2, sin, cos, degrees, radians
 
+
 pygame.init()
 clock = pygame.time.Clock()
 size = width, height = new_width, new_height = 1024, 600
@@ -13,6 +14,7 @@ pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
 all_allies = pygame.sprite.Group()
+all_projectiles = pygame.sprite.Group()
 all_platforms = pygame.sprite.Group()
 all_branches = pygame.sprite.Group()
 all_attacks = pygame.sprite.Group()
@@ -72,10 +74,6 @@ def clear_UI():
     background = pygame.transform.scale(load_image("background.png"), (width, height))
     current_UI = pygame.sprite.Group()
 
-def create_map():
-    # Здесь откроем файл с картой и добавим все объекты
-    with open('map.txt') as file:
-        exec(file.read())
 
 def new_game():
     global all_sprites, all_enemies, all_allies, all_platforms, tree
@@ -101,20 +99,35 @@ class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
         self.dx = 0
+        self.boss = False
 
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
         if obj.__class__.__name__ == 'Web':
             obj.target = (obj.target[0] + self.dx, obj.target[1])
-        if obj.__class__.__name__ == 'Wasp' or obj.__class__.__name__ == 'Dragonfly':
+        if obj.__class__.__name__ == 'Wasp':
             obj.right_pos += self.dx
             obj.left_pos += self.dx
+        if obj.__class__.__name__ == 'Dragonfly':
+            obj.pos_args = [(x + self.dx, y, v) for x, y, v in obj.pos_args]
+        if obj.__class__.__name__ == 'BossFirstPhase':
+            obj.pos_args = [(x + self.dx, y, v) for x, y, v in obj.pos_args]
 
     # позиционировать камеру на объекте target
     def update(self, target):
-        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-        player.save_point[0] += self.dx
+        if not self.boss:
+            self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+            player.save_point[0] += self.dx
+        else:
+            self.dx = -(target.rect.x - width // 6)
+            player.save_point[0] += self.dx
+
+    def BossCamTurn(self):
+        if self.boss:
+            self.boss = False
+        else:
+            self.boss = True
 
 
 class Border(pygame.sprite.Sprite):
@@ -132,7 +145,7 @@ class Particle(pygame.sprite.Sprite):
     for scale in (1, 2, 3):
         fire.append(pygame.transform.scale(fire[0], (scale, scale)))
 
-    def __init__(self, pos, dx, dy):
+    def __init__(self, pos, dx, dy, gravity=-0.5):
         super().__init__(all_sprites)
         self.image = random.choice(self.fire)
         self.rect = self.image.get_rect()
@@ -156,6 +169,21 @@ class Particle(pygame.sprite.Sprite):
         self.rect.y += int(self.velocity[1])
         # убиваем, если частица ушла за экран
         if self.velocity[1] >= 0 or self.velocity[0] == 0:
+            self.kill()
+
+
+class StalactiteParticle(Particle):
+    fire = [load_image('dirt.png')]
+    def __init__(self, pos, dx, dy, gravity=0.5):
+        super().__init__(pos, dx, dy, gravity)
+        self.randomheight = random.randint(height // 48, height // 12)
+    def update(self, check):
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if self.rect.y > self.randomheight:
             self.kill()
 
 
@@ -314,7 +342,7 @@ class Web(pygame.sprite.Sprite):
         self.length = 13
         self.wait = 5
         # зададим угол, под которым находится цель
-        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512))) + 270
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - player.rect.x - 20))) + 270
         if target[0] - 512 < 0:
             self.x_negative = -1
         else:
@@ -347,7 +375,8 @@ class Web(pygame.sprite.Sprite):
                     player.web = None
                     self.kill()
                 else:
-                    self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]), (self.target[0] - 512))) + 270
+                    self.angle = degrees(atan2((player.rect.y + 50 - self.target[1]),
+                                               (self.target[0] - player.rect.x - 20))) + 270
                     self.image = pygame.transform.rotate(Web.web.subsurface(0, 0, 40, self.length), self.angle)
                     self.length += 15
 
@@ -422,7 +451,7 @@ class Poison(pygame.sprite.Sprite):
         self.frames = []
         self.cut_sheet(Poison.poison, 4)
         self.cur_frame = 0
-        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - 512)))
+        self.angle = degrees(atan2((player.rect.y - target[1]), (target[0] - player.rect.x - 20)))
         self.x_velocity = int(cos(radians(self.angle)) * 20)
 
         self.y_velocity = -int(sin(radians(self.angle)) * 20)
@@ -445,12 +474,45 @@ class Poison(pygame.sprite.Sprite):
         for i in all_platforms:
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
+        for i in all_enemies:
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
         if pygame.sprite.spritecollideany(self, horizontal_borders) or pygame.sprite.spritecollideany(self, tree):
             self.kill()
         self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x += self.x_velocity
         self.rect.y += self.y_velocity
+
+
+class Stalactite(pygame.sprite.Sprite):
+    stalactite = pygame.transform.scale(load_image('Stalactite.png'), (20, 60))
+    def __init__(self):
+        super().__init__(all_sprites)
+        self.add(all_projectiles)
+        self.damage = 50
+        self.image = Stalactite.stalactite
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(random.randint(0, width), -60)
+        self.gravity = 5
+        self.wait = 40
+
+    def update(self, check):
+        if self.wait:
+            StalactiteParticle((self.rect.x, 0), random.randint(-1, 1), random.randint(0, 1), gravity=0.5)
+            self.wait -= 1
+        else:
+            self.rect = self.rect.move(0, self.gravity)
+            for i in all_enemies:
+                if pygame.sprite.collide_mask(self, i):
+                    i.health -= self.damage
+                    i.immunity_frames = 60
+                    self.kill()
+            for attack in all_attacks:
+                if pygame.sprite.collide_mask(self, attack):
+                    self.kill()
+                    attack.kill()
 
 
 class Spider(pygame.sprite.Sprite):
@@ -577,7 +639,16 @@ class Spider(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, all_enemies) and not self.immunity_frames:
             for enemy in all_enemies:
                 if pygame.sprite.collide_mask(self, enemy):
+                    if enemy.__class__.__name__ == "Fly":
+                        self.health += 1
+                        enemy.kill()
+                    else:
+                        self.respawn()
+        if pygame.sprite.spritecollideany(self, all_projectiles) and not self.immunity_frames:
+            for i in all_projectiles:
+                if pygame.sprite.collide_mask(self, i):
                     self.respawn()
+                    i.kill()
         if pygame.sprite.spritecollideany(self, horizontal_borders) and self.rect.y < 5:
             self.y_velocity = abs(self.y_velocity) // 2
             self.going_up = False
@@ -618,6 +689,42 @@ class TreeBorder(pygame.sprite.Sprite):
         self.particles = False
         self.rect.x = -1000
         self.rect.y = -100
+
+
+class RockWall(pygame.sprite.Sprite):
+    image = load_image("Cave_wall.png")
+
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.image = RockWall.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x
+        self.rect.y = y
+
+
+class RockPlatform(pygame.sprite.Sprite):
+    image = load_image("Rock_Platform1.png")
+    landing = pygame.mixer.Sound(os.path.join('data', 'music', f'rock_landing.mp3'))
+
+    def __init__(self, x, y):
+        super().__init__(all_sprites)
+        self.add(all_platforms)
+        self.image = RockPlatform.image
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self, check):
+        if not self.particles and pygame.sprite.collide_mask(self, player) and player.current_sprite != self:
+            self.particles = True
+            RockPlatform.landing.set_volume(0.4)
+            RockPlatform.landing.play(0)
+        elif not pygame.sprite.collide_mask(self, player):
+            self.particles = False
 
 
 class FlowerPlatform(pygame.sprite.Sprite):
@@ -668,6 +775,7 @@ class Enemy(pygame.sprite.Sprite):
         self.health = health
         self.poison_damage = 0
         self.wait = 5
+        self.wait_max = 5
         self.frames = []
         self.cut_sheet(sheet, count)
         self.cur_frame = 0
@@ -694,7 +802,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.wait == 0:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
             self.image = pygame.transform.flip(self.frames[self.cur_frame], self.rotation, False)
-            self.wait = 5
+            self.wait = self.wait_max
         if not self.immunity_frames:
             for i in all_attacks:
                 if pygame.sprite.collide_mask(self, i):
@@ -722,7 +830,6 @@ class Wasp(Enemy):
         self.left_pos = left_pos
         self.right_pos = right_pos
         self.v = v
-        self.x_pos = self.left_pos
         self.sound = Wasp.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
@@ -745,17 +852,18 @@ class Wasp(Enemy):
 
 class Dragonfly(Enemy):
     enemy = load_image("Dragonfly.png")
-    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'bee_sound.mp3'))
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'dragonfly_sound.mp3'))
 
-    def __init__(self, x, y, left_pos, right_pos, sheet=None, count=6, v=7, health=150, sleep=50):
+    def __init__(self, x, y, pos_args, sheet=None, count=6, health=120, sleep=50):
         sheet = Dragonfly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
-        self.left_pos = left_pos
-        self.right_pos = right_pos
-        self.v = v
+        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.wait = 3
+        self.wait_max = 3
         self.sleep = sleep
-        self.x_pos = self.left_pos
-        self.sound = Wasp.buzz
+        self.i = 0
+        self.v = self.pos_args[self.i][2]
+        self.sound = Dragonfly.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
 
@@ -764,15 +872,63 @@ class Dragonfly(Enemy):
         if self.sleep:
             self.sleep -= 1
         else:
-            if self.rotation:
-                self.rect.x += self.v  # v в пикселях
+            if self.v:
+                self.rect.x += (self.pos_args[self.i][0] - self.rect.x) // self.v
+                self.rect.y += (self.pos_args[self.i][1] - self.rect.y) // self.v
+                self.v -= 1
             else:
-                self.rect.x -= self.v  # v в пикселях
-            if self.rect.x >= self.right_pos:
-                self.rotation = False
+                self.rect.x, self.rect.y = self.pos_args[self.i][:2]
+                self.i = (self.i + 1) % len(self.pos_args)
+                self.v = self.pos_args[self.i][2]
                 self.sleep = 50
-            elif self.rect.x <= self.left_pos:
+            if self.rect.x >= self.pos_args[self.i][0]:
+                self.rotation = False
+            elif self.rect.x <= self.pos_args[self.i][0]:
                 self.rotation = True
+        if abs(self.rect.x - player.rect.x) < 500:
+            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+        else:
+            self.sound.set_volume(0)
+
+
+class Fly(Enemy):
+    enemy = load_image("Black_Fly.png")
+
+    def __init__(self, x, y, sheet=None, count=1, health=1):
+        sheet = Fly.enemy if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+
+
+class BossFirstPhase(Enemy):
+    enemy = pygame.transform.scale(load_image("SpiderIdleFront2.png"), (80, 80))
+    buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
+
+    def __init__(self, x, y, pos_args, sheet=None, count=1, health=2000, sleep=50):
+        sheet = BossFirstPhase.enemy if not sheet else sheet
+        super().__init__(x, y, sheet, count, health)
+        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.wait = 3
+        self.wait_max = 3
+        self.sleep = sleep
+        self.i = 0
+        self.v = self.pos_args[self.i][2]
+        self.sound = Dragonfly.buzz
+        self.sound.set_volume(0)
+        self.sound.play(-1)
+
+    def update(self, check):
+        super().update(check)
+        if self.sleep:
+            self.sleep -= 1
+        else:
+            if self.v:
+                self.rect.x += (self.pos_args[self.i][0] - self.rect.x) // self.v
+                self.rect.y += (self.pos_args[self.i][1] - self.rect.y) // self.v
+                self.v -= 1
+            else:
+                self.rect.x, self.rect.y = self.pos_args[self.i][:2]
+                self.i = (self.i + random.randint(1, 5)) % len(self.pos_args)
+                self.v = self.pos_args[self.i][2]
                 self.sleep = 50
             if abs(self.rect.x - player.rect.x) < 500:
                 self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
@@ -790,9 +946,11 @@ sound.set_volume(0.03)
 sound.play(-1)
 
 running = True
+count = 0
 while running:
     if not current_UI:
         for event in pygame.event.get():
+            keys = pygame.key.get_pressed()
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -816,6 +974,11 @@ while running:
                 poison_sound.set_volume(0.2)
                 poison_sound.play(0)
                 Poison(event.pos)
+            if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
+                camera.BossCamTurn()
+            if not count % 40:
+                Stalactite()
+            count += 1
 
         screen.blit(background, (0, 0))
         all_sprites.draw(screen)
