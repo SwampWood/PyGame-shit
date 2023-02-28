@@ -976,9 +976,11 @@ while running:
                 Poison(event.pos)
             if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
                 camera.BossCamTurn()
+            """
             if not count % 40:
                 Stalactite()
             count += 1
+            """
 
         screen.blit(background, (0, 0))
         all_sprites.draw(screen)
