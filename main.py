@@ -49,26 +49,6 @@ def create_map():
         exec(file.read())
 
 
-def new_game():
-    global all_sprites, all_enemies, all_allies, all_platforms, tree
-    global system_bars, current_UI, horizontal_borders, player, score, background
-    all_sprites = pygame.sprite.Group()
-    all_enemies = pygame.sprite.Group()
-    all_allies = pygame.sprite.Group()
-    all_platforms = pygame.sprite.Group()
-    tree = pygame.sprite.Group()
-    system_bars = pygame.sprite.Group()
-    current_UI = pygame.sprite.Group()
-    horizontal_borders = pygame.sprite.Group()
-    background = pygame.transform.scale(load_image("background.png"), (width, height))
-    player = Spider()
-    create_map()
-    Border(0, -2, 6624)
-    Border(0, 700, 6624)
-    HealthBar()
-    score = Score()
-
-
 def clear_UI():
     global background, current_UI
     background = pygame.transform.scale(load_image("background.png"), (width, height))
@@ -84,15 +64,15 @@ def new_game():
     all_platforms = pygame.sprite.Group()
     tree = pygame.sprite.Group()
     system_bars = pygame.sprite.Group()
-    current_UI = pygame.sprite.Group()
     horizontal_borders = pygame.sprite.Group()
-    background = pygame.transform.scale(load_image("background.png"), (width, height))
+    clear_UI()
     player = Spider()
     create_map()
     Border(0, -2, 6624)
     Border(0, 700, 6624)
     HealthBar()
     score = Score()
+    Tutorial()
 
 
 class Camera:
@@ -240,7 +220,6 @@ class Button(pygame.sprite.Sprite):
         if self.func:
             self.func()
 
-
     def change_text(self, text):
         self.text.kill()
         text = Text(-50, -50, self.rect.height - 10, text)
@@ -299,6 +278,31 @@ class Pause:
         Button(270, 200, 50, 500, 'Продолжить', func_=clear_UI)
         Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(Pause))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
+class Tutorial():
+    def __init__(self):
+        global background
+        clear_UI()
+        Text(10, 20, 25, 'Передвижение - A или D')
+        Text(300, 20, 25, 'Прыжок - Пробел')
+        Text(552, 20, 25, 'Выстрел ядом - ЛКМ')
+        Text(818, 20, 25, 'Укус - E')
+        Text(775, 60, 25, 'Укус имеет шанс')
+        Text(760, 90, 25, 'восстановить 1 жизнь')
+        Text(10, 330, 25, 'Выстрел паутиной - ПКМ')
+        Text(350, 360, 22, 'Осторожно!')
+        Text(310, 395, 22, 'Паутина растягивается.')
+        Text(280, 430, 22, 'Успейте спрыгнуть использовав')
+        Text(370, 455, 22, 'Пробел')
+        Text(500, 330, 25, 'Побеждайте противников')
+        Text(560, 360, 25, 'и повышайте счет')
+        Text(780, 330, 25, 'Вы можете съесть мух')
+        Text(790, 360, 25, 'чтобы восстановить')
+        Text(840, 390, 25, 'здоровье')
+        button = Button(0, 0, width, height, '', func_=clear_UI)
+        button.image.set_alpha(0)
+        background = pygame.transform.scale(load_image("Tutorial.png"), (width, height))
 
 
 class StartScreen:
@@ -810,7 +814,7 @@ class Enemy(pygame.sprite.Sprite):
                     self.health -= i.damage
                     self.immunity_frames = 60
 
-                    if i.__class__.__name__ == 'Bite' and random.randint(1, 100) == 98:
+                    if i.__class__.__name__ == 'Bite' and random.randint(1, 100) >= 90:
                         player.health += 1
                     elif i.__class__.__name__ == 'Poison':
                         self.poison_damage = 40
@@ -898,7 +902,7 @@ class Dragonfly(Enemy):
 class Fly(Enemy):
     enemy = load_image("Black_Fly.png")
 
-    def __init__(self, x, y, sheet=None, count=1, health=1):
+    def __init__(self, x, y, sheet=None, count=2, health=1):
         sheet = Fly.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.cost = 100
