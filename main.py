@@ -9,7 +9,7 @@ pygame.init()
 clock = pygame.time.Clock()
 size = width, height = 1024, 600
 screen = pygame.display.set_mode(size)
-screen.fill(pygame.Color('blue'))
+screen.fill(pygame.Color('black'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
@@ -20,6 +20,7 @@ all_branches = pygame.sprite.Group()
 all_attacks = pygame.sprite.Group()
 tree = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
+vertical_border = 3 * width
 
 
 def load_image(name, colorkey=None):
@@ -59,12 +60,13 @@ class Camera:
 
     # позиционировать камеру на объекте target
     def update(self, target):
+        global vertical_border
         if not self.boss:
             self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-            player.save_point[0] += self.dx
         else:
             self.dx = -(target.rect.x - width // 6)
-            player.save_point[0] += self.dx
+        player.save_point[0] += self.dx
+        vertical_border += self.dx
 
     def BossCamTurn(self):
         if self.boss:
@@ -76,8 +78,7 @@ class Camera:
 class Border(pygame.sprite.Sprite):
     # строго вертикальный отрезок
     def __init__(self, x1, y1, x2):
-        super().__init__(all_sprites)
-        self.add(horizontal_borders)
+        super().__init__(all_sprites, horizontal_borders)
         self.image = pygame.Surface([x2 - x1, 1])
         self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
@@ -101,7 +102,6 @@ class Particle(pygame.sprite.Sprite):
         # гравитация будет одинаковой (значение константы) (нет)
         self.gravity = gravity
 
-
     def update(self, check):
         # применяем гравитационный эффект:
         # движение с ускорением под действием гравитации
@@ -118,9 +118,11 @@ class Particle(pygame.sprite.Sprite):
 
 class StalactiteParticle(Particle):
     fire = [load_image('dirt.png')]
+
     def __init__(self, pos, dx, dy, gravity=0.5):
         super().__init__(pos, dx, dy, gravity)
         self.randomheight = random.randint(height // 48, height // 12)
+
     def update(self, check):
         self.velocity[1] += self.gravity
         # перемещаем частицу
@@ -129,6 +131,7 @@ class StalactiteParticle(Particle):
         # убиваем, если частица ушла за экран
         if self.rect.y > self.randomheight:
             self.kill()
+
 
 class Web(pygame.sprite.Sprite):
     web = load_image('Web.png')
@@ -738,7 +741,24 @@ class BossFirstPhase(Enemy):
             self.sound.set_volume(0)
 
 
+def clear_map():
+    global all_sprites, all_enemies, all_allies, all_projectiles, all_platforms, all_branches, all_attacks, tree
+    global horizontal_borders
+    all_sprites = pygame.sprite.Group()
+    all_enemies = pygame.sprite.Group()
+    all_allies = pygame.sprite.Group()
+    all_projectiles = pygame.sprite.Group()
+    all_platforms = pygame.sprite.Group()
+    all_branches = pygame.sprite.Group()
+    all_attacks = pygame.sprite.Group()
+    tree = pygame.sprite.Group()
+    horizontal_borders = pygame.sprite.Group()
+
+
 def create_map():
+    global vertical_border
+    vertical_border = 3 * width
+    clear_map()
     # Здесь будем использовать различные классы для создания карты
     enemy_flower = load_image('VenusFlyTrapAnimation.png')
     RockWall(-150, -20)
@@ -751,6 +771,28 @@ def create_map():
     Fly(400, 350)
     positons = [(1200, 475, 40), (1200, 75, 40), (1300, 300, 40), (1500, 475, 40), (1500, 75, 40)]
     BossFirstPhase(1300, 300, positons)
+
+
+def next_level():
+    global screen
+    k = 1
+    go_up = True
+    screen2 = pygame.surface.Surface(width, height)
+    screen2.fill((0, 0, 0))
+    screen2.set_alpha(k)
+
+    while k:
+        screen.blit(screen2, (0, 0))
+        if go_up:
+            k += 1
+            if k == 100:
+                go_up = False
+                create_map()
+        else:
+            k -= 1
+        pygame.display.flip()
+
+    camera.BossCamTurn()
 
 
 background = load_image("background.png")
@@ -777,7 +819,7 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
             player.attack_cd = 30
             bite_sound = pygame.mixer.Sound(os.path.join('data', 'music',
-                                                           f'bite_soundeffect{random.randint(1, 2)}.mp3'))
+                                                         f'bite_soundeffect{random.randint(1, 2)}.mp3'))
             bite_sound.set_volume(0.2)
             bite_sound.play(0)
             Bite()
@@ -800,6 +842,8 @@ while running:
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
+    if vertical_border <= width // 2:
+        next_level()
     clock.tick(60)
     pygame.display.flip()
 pygame.quit()
