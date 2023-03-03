@@ -41,8 +41,7 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
-    return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
-                                          image.get_size()[1] * (new_height + 100) / height))
+    return image
 
 
 def create_map():
