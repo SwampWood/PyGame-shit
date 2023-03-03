@@ -24,6 +24,7 @@ current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 fullscreen = False
 is_paused = False
+login = ''
 
 
 def load_image(name, colorkey=None):
@@ -228,6 +229,38 @@ class Button(pygame.sprite.Sprite):
         self.text = text
 
 
+class InputLogin(pygame.sprite.Sprite):
+    def __init__(self, w_widget=300, h_widget=30, w_screen=width, h_screen=height):
+        super().__init__(current_UI)
+        left, top = (w_screen - w_widget) // 2, (h_screen - h_widget) // 2
+        self.rect = pygame.Rect((left, top, w_widget, h_widget))
+        self.image = pygame.Surface((w_widget, h_widget), pygame.SRCALPHA, 32)
+        self.image.fill("grey")
+        self.font_size = 25
+        self.font = pygame.font.Font("data/ComicSansMSPixel.ttf", self.font_size)
+        self.login = ''
+        self.text = self.font.render(self.login, True, "black")
+        self.limit = self.rect.w - self.font_size
+
+    def update(self, event=None, **kwargs):  # type of event is pygame.KEYDOWN
+        if not event:  # unicode, key, mod, scancode, window
+            return
+        if event.key == 8:  # backspace
+            self.login = self.login[:-1]
+        elif event.key == 32:
+            if len(self.login):
+                self.login += event.unicode
+        elif event.key not in (9, ):
+            self.login += event.unicode
+        text = self.font.render(self.login, True, "black")
+        if text.get_width() > self.limit:
+            self.login = self.login[:-1]
+            return
+        self.text = text
+        self.image.fill("grey")
+        self.image.blit(self.text, (10, 5))
+
+
 class Text(pygame.sprite.Sprite):
     def __init__(self, x, y, size_, text, color=(255, 255, 255)):
         super().__init__(current_UI)
@@ -280,7 +313,7 @@ class Pause:
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
-class Tutorial():
+class Tutorial:
     def __init__(self):
         global background
         clear_UI()
@@ -315,6 +348,40 @@ class StartScreen:
         Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
         Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
+class GetName:
+    def __init__(self):
+        global background
+        clear_UI()
+        self.running = True
+        Text(400, 50, 50, 'Введите имя')
+        self.input_name = InputLogin()
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Button(270, 500, 50, 500, 'Продолжить', func_=self.set_name)
+        self.run()
+
+    def set_name(self):
+        global login
+        login = self.input_name.login
+        self.running = False
+
+    def run(self):
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    for sprite in current_UI:
+                        if sprite.__class__.__name__ == 'Button' and sprite.rect.collidepoint(event.pos):
+                            sprite()
+                if event.type == pygame.KEYDOWN:
+                    self.input_name.update(event=event)
+
+            screen.blit(background, (0, 0))
+            current_UI.draw(screen)
+            clock.tick(60)
+            pygame.display.flip()
 
 
 class HealthBar(pygame.sprite.Sprite):
@@ -950,6 +1017,7 @@ background = pygame.transform.scale(load_image("background.png"), (width, height
 player = Spider()
 score = Score()
 camera = Camera()
+GetName()
 StartScreen()
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.03)
