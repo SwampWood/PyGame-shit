@@ -155,9 +155,11 @@ class Particle(pygame.sprite.Sprite):
 
 class StalactiteParticle(Particle):
     fire = [load_image('dirt.png')]
+
     def __init__(self, pos, dx, dy, gravity=0.5):
         super().__init__(pos, dx, dy, gravity)
         self.randomheight = random.randint(height // 48, height // 12)
+
     def update(self, check):
         self.velocity[1] += self.gravity
         # перемещаем частицу
@@ -982,7 +984,7 @@ class BossFirstPhase(Enemy):
     def __init__(self, x, y, pos_args, sheet=None, count=1, health=2000, sleep=50):
         sheet = BossFirstPhase.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
-        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.pos_args = pos_args  # список кортежей с координатами и скоростями
         self.wait = 3
         self.wait_max = 3
         self.sleep = sleep
