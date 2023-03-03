@@ -44,9 +44,9 @@ def load_image(name, colorkey=None):
     return image
 
 
-def create_map():
+def create_map(filename):
     # Здесь откроем файл с картой и добавим все объекты
-    with open('map.txt') as file:
+    with open(filename) as file:
         exec(file.read())
 
 
@@ -56,7 +56,7 @@ def clear_UI():
     current_UI = pygame.sprite.Group()
 
 
-def new_game():
+def new_game(filename):
     global all_sprites, all_enemies, all_allies, all_platforms, tree
     global system_bars, current_UI, horizontal_borders, player, score, background
     all_sprites = pygame.sprite.Group()
@@ -68,7 +68,7 @@ def new_game():
     horizontal_borders = pygame.sprite.Group()
     clear_UI()
     player = Spider()
-    create_map()
+    create_map(filename)
     Border(0, -2, 6624)
     Border(0, 700, 6624)
     HealthBar()
@@ -274,12 +274,12 @@ class Text(pygame.sprite.Sprite):
 
 
 class EndScreen:
-    def __init__(self):
+    def __init__(self, filename='map.txt'):
         global background
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
         Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
-        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Button(6, 500, 50, 500, 'Новая игра', func_=new_game(filename))
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
@@ -341,13 +341,13 @@ class Tutorial:
 
 
 class StartScreen:
-    def __init__(self):
+    def __init__(self, filename='map.txt'):
         global background
         clear_UI()
         Text(400, 50, 50, 'PyGame-shit')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
-        Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
+        Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename))
         Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
@@ -1022,7 +1022,7 @@ player = Spider()
 score = Score()
 camera = Camera()
 GetName()
-StartScreen()
+StartScreen('boss_map.txt')
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.03)
 sound.play(-1)
@@ -1061,6 +1061,7 @@ while running:
 
         screen.blit(background, (0, 0))
         all_sprites.draw(screen)
+        all_allies.draw(screen)
         system_bars.draw(screen)
         score.update()
         all_sprites.update(pygame.key.get_pressed())
