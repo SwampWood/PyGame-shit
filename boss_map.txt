@@ -1,0 +1,11 @@
+enemy_flower = load_image('VenusFlyTrapAnimation.png')
+RockWall(-150, -20)
+TreeBorder()
+RockPlatform(20, 500)
+RockPlatform(400, 400)
+RockPlatform(800, 300)
+RockPlatform(1000, 500)
+RockPlatform(1000, 100)
+Fly(400, 350)
+positons = [(1200, 475, 40), (1200, 75, 40), (1300, 300, 40), (1500, 475, 40), (1500, 75, 40)]
+BossFirstPhase(1300, 300, positons)
