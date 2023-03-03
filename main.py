@@ -828,13 +828,14 @@ class FlowerPlatform(pygame.sprite.Sprite):
             self.particles = False
 
 
-class TreeBranch(pygame.sprite.Sprite):
-    images = [load_image("Branch1.png"), load_image("Branch2.png"), load_image("Branch3.png")]
+class Branch(pygame.sprite.Sprite):
+    images = [load_image("Branch1.png"), load_image("Branch2.png"), load_image("Branch3.png"),
+              load_image("RockBranch1.png"), load_image("RockBranch2.png"), load_image("RockBranch3.png")]
 
     def __init__(self, x, y, type_):
         super().__init__(all_sprites)
         self.add(all_branches)
-        self.image = TreeBranch.images[type_]
+        self.image = Branch.images[type_]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.particles = False
