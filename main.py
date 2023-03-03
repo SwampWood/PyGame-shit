@@ -7,9 +7,9 @@ from math import atan2, sin, cos, degrees, radians
 
 pygame.init()
 clock = pygame.time.Clock()
-size = width, height = new_width, new_height = 1024, 600
-screen = pygame.display.set_mode((new_width, new_height))
-screen.fill(pygame.Color('blue'))
+size = width, height = 1024, 600
+screen = pygame.display.set_mode(size)
+screen.fill(pygame.Color('black'))
 pygame.display.set_caption('Revenge is a dish best served sticky')
 all_sprites = pygame.sprite.Group()
 all_enemies = pygame.sprite.Group()
@@ -22,6 +22,7 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
+vertical_border = 3 * width
 fullscreen = False
 is_paused = False
 login = ''
@@ -40,8 +41,7 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
-    return pygame.transform.scale(image, (image.get_size()[0] * (new_width + 50) / width,
-                                          image.get_size()[1] * (new_height + 100) / height))
+    return image
 
 
 def create_map(filename):
@@ -97,12 +97,13 @@ class Camera:
 
     # позиционировать камеру на объекте target
     def update(self, target):
+        global vertical_border
         if not self.boss:
             self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-            player.save_point[0] += self.dx
         else:
             self.dx = -(target.rect.x - width // 6)
-            player.save_point[0] += self.dx
+        player.save_point[0] += self.dx
+        vertical_border += self.dx
 
     def BossCamTurn(self):
         if self.boss:
@@ -114,8 +115,7 @@ class Camera:
 class Border(pygame.sprite.Sprite):
     # строго вертикальный отрезок
     def __init__(self, x1, y1, x2):
-        super().__init__(all_sprites)
-        self.add(horizontal_borders)
+        super().__init__(all_sprites, horizontal_borders)
         self.image = pygame.Surface([x2 - x1, 1])
         self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
@@ -136,8 +136,8 @@ class Particle(pygame.sprite.Sprite):
         # и свои координаты
         self.rect.x, self.rect.y = pos
 
-        # гравитация будет одинаковой (значение константы)
-        self.gravity = -0.5
+        # гравитация будет одинаковой (значение константы) (нет)
+        self.gravity = gravity
 
     def update(self, check):
         # применяем гравитационный эффект:
@@ -155,9 +155,11 @@ class Particle(pygame.sprite.Sprite):
 
 class StalactiteParticle(Particle):
     fire = [load_image('dirt.png')]
+
     def __init__(self, pos, dx, dy, gravity=0.5):
         super().__init__(pos, dx, dy, gravity)
         self.randomheight = random.randint(height // 48, height // 12)
+
     def update(self, check):
         self.velocity[1] += self.gravity
         # перемещаем частицу
@@ -558,6 +560,7 @@ class Poison(pygame.sprite.Sprite):
 
 class Stalactite(pygame.sprite.Sprite):
     stalactite = pygame.transform.scale(load_image('Stalactite.png'), (20, 60))
+
     def __init__(self):
         super().__init__(all_sprites)
         self.add(all_projectiles)
@@ -982,7 +985,7 @@ class BossFirstPhase(Enemy):
     def __init__(self, x, y, pos_args, sheet=None, count=1, health=2000, sleep=50):
         sheet = BossFirstPhase.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
-        self.pos_args = pos_args  # список корежей с координатами и скоростями
+        self.pos_args = pos_args  # список кортежей с координатами и скоростями
         self.wait = 3
         self.wait_max = 3
         self.sleep = sleep
