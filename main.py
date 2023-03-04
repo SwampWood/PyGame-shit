@@ -74,8 +74,8 @@ def new_game(filename='map.txt', firsttime=False):
     clear_UI()
     player = Spider()
     create_map(filename)
-    Border(0, -2, 6624)
-    Border(0, 700, 6624)
+    Border(0, -2, 24000)
+    Border(0, 700, 24000)
     HealthBar()
     score = Score()
     if firsttime:
@@ -1068,7 +1068,7 @@ sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3')
 sound.set_volume(0.03)
 sound.play(-1)
 GetName()
-StartScreen('boss_map.txt')
+StartScreen('map.txt')
 
 running = True
 count = 0
@@ -1113,7 +1113,7 @@ while running:
         for sprite in all_sprites:
             camera.apply(sprite)
         if vertical_border <= 0:
-            print(True)
+            pass
         gameplay_background = screen.copy()
 
     else:
