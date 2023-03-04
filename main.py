@@ -948,8 +948,7 @@ class Wasp(Enemy):
         self.right_pos = right_pos
         self.v = v
         self.sound = Wasp.buzz
-        self.sound.set_volume(0)
-        self.sound.play(-1)
+        self.sound_is_played = False
         self.cost = 150
 
     def update(self, check):
@@ -963,9 +962,14 @@ class Wasp(Enemy):
         elif self.rect.x <= self.left_pos:
             self.rotation = False
         if abs(self.rect.x - player.rect.x) < 500:
+            if not self.sound_is_played:
+                self.sound.play(-1)
+            self.sound_is_played = True
             self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
         else:
-            self.sound.set_volume(0)
+            if self.sound_is_played:
+                self.sound.stop()
+            self.sound_is_played = False
 
 
 class Dragonfly(Enemy):
@@ -982,8 +986,7 @@ class Dragonfly(Enemy):
         self.i = 0
         self.v = self.pos_args[self.i][2]
         self.sound = Dragonfly.buzz
-        self.sound.set_volume(0)
-        self.sound.play(-1)
+        self.sound_is_played = False
         self.cost = 200
 
     def update(self, check):
@@ -1005,9 +1008,14 @@ class Dragonfly(Enemy):
             elif self.rect.x <= self.pos_args[self.i][0]:
                 self.rotation = True
         if abs(self.rect.x - player.rect.x) < 500:
+            if not self.sound_is_played:
+                self.sound.play(-1)
+            self.sound_is_played = True
             self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
         else:
-            self.sound.set_volume(0)
+            if self.sound_is_played:
+                self.sound.stop()
+            self.sound_is_played = False
 
 
 class Fly(Enemy):
@@ -1033,8 +1041,7 @@ class BossFirstPhase(Enemy):
         self.i = 0
         self.v = self.pos_args[self.i][2]
         self.sound = BossFirstPhase.buzz
-        self.sound.set_volume(0)
-        self.sound.play(-1)
+        self.sound_is_played = False
         self.cost = 1000
 
     def update(self, check):
@@ -1055,9 +1062,14 @@ class BossFirstPhase(Enemy):
                 self.v = self.pos_args[self.i][2]
                 self.sleep = 50
             if abs(self.rect.x - player.rect.x) < 500:
+                if not self.sound_is_played:
+                    self.sound.play(-1)
+                self.sound_is_played = True
                 self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
             else:
-                self.sound.set_volume(0)
+                if self.sound_is_played:
+                    self.sound.stop()
+                self.sound_is_played = False
 
 
 background = pygame.transform.scale(load_image("background.png"), (width, height))
