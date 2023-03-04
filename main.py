@@ -195,7 +195,7 @@ class EndScreen:
 class StartScreen:
     def __init__(self):
         global background
-        Text(400, 50, 50, 'PyGame-shit')
+        Text(400, 50, 50, 'Web-enge')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Button(270, 200, 50, 500, 'Новая игра', func_=new_game)
