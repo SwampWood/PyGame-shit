@@ -802,8 +802,7 @@ class RockPlatform(pygame.sprite.Sprite):
 
 
 class FlowerPlatform(pygame.sprite.Sprite):
-    images = [load_image("Platforms1.png"), load_image("Platforms2.png"),
-              load_image("Platforms3.png"), load_image("Platforms1.png")]
+    images = [load_image("Platforms1.png"), load_image("Platforms2.png"), load_image("Platforms3.png")]
     landing = pygame.mixer.Sound(os.path.join('data', 'music', f'grass_landing{random.randint(1, 3)}.mp3'))
 
     def __init__(self, x, y, type_):
@@ -980,19 +979,19 @@ class Fly(Enemy):
 
 
 class BossFirstPhase(Enemy):
-    enemy = pygame.transform.scale(load_image("SpiderIdleFront2.png"), (80, 80))
+    enemy = pygame.transform.scale(load_image("Boss.png"), (600, 120))
     buzz = pygame.mixer.Sound(os.path.join('data', 'music', f'boss_walking.mp3'))
 
-    def __init__(self, x, y, pos_args, sheet=None, count=1, health=2000, sleep=50):
+    def __init__(self, x, y, pos_args, sheet=None, count=5, health=2000, sleep=50):
         sheet = BossFirstPhase.enemy if not sheet else sheet
         super().__init__(x, y, sheet, count, health)
         self.pos_args = pos_args  # список кортежей с координатами и скоростями
-        self.wait = 3
-        self.wait_max = 3
+        self.wait = 8
+        self.wait_max = 8
         self.sleep = sleep
         self.i = 0
         self.v = self.pos_args[self.i][2]
-        self.sound = Dragonfly.buzz
+        self.sound = BossFirstPhase.buzz
         self.sound.set_volume(0)
         self.sound.play(-1)
         self.cost = 1000
@@ -1000,6 +999,7 @@ class BossFirstPhase(Enemy):
     def update(self, check):
         super().update(check)
         if self.sleep:
+            self.cur_frame = 4
             self.sleep -= 1
         else:
             if self.v:
@@ -1008,7 +1008,9 @@ class BossFirstPhase(Enemy):
                 self.v -= 1
             else:
                 self.rect.x, self.rect.y = self.pos_args[self.i][:2]
-                self.i = (self.i + random.randint(1, 5)) % len(self.pos_args)
+                prev_i = self.i
+                while self.i == prev_i:
+                    self.i = random.randint(0, 4)
                 self.v = self.pos_args[self.i][2]
                 self.sleep = 50
             if abs(self.rect.x - player.rect.x) < 500:
@@ -1046,7 +1048,7 @@ while running:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
                 player.attack_cd = 30
                 bite_sound = pygame.mixer.Sound(os.path.join('data', 'music',
-                                                               f'bite_soundeffect{random.randint(1, 2)}.mp3'))
+                                                             f'bite_soundeffect{random.randint(1, 2)}.mp3'))
                 bite_sound.set_volume(0.2)
                 bite_sound.play(0)
                 Bite()
