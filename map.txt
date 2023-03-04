@@ -1,5 +1,6 @@
 enemy_flower = load_image('VenusFlyTrapAnimation.png')
 TreeBorder()
+RockBorder()
 FlowerPlatform(20, 500, 1)
 FlowerPlatform(600, 400, 0)
 FlowerPlatform(1000, 300, 2)

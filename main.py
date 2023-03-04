@@ -22,7 +22,7 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
-vertical_border = 3 * width
+vertical_border = 4 * width
 k = 1
 fullscreen = False
 is_paused = False
@@ -54,6 +54,8 @@ def create_map(filename):
 def clear_UI():
     global background, current_UI
     background = pygame.transform.scale(load_image("background.png"), (width, height))
+    for i in current_UI:
+        i.kill()
     current_UI = pygame.sprite.Group()
 
 
@@ -730,8 +732,9 @@ class Spider(pygame.sprite.Sprite):
                 break
             else:
                 self.drop = True
-        if pygame.sprite.collide_mask(self, [x for x in tree][0]):
-            self.x_velocity = 60
+        for x in tree:
+            if pygame.sprite.collide_mask(self, x):
+                self.x_velocity = 60
         if pygame.sprite.spritecollideany(self, all_enemies) and not self.immunity_frames:
             for enemy in all_enemies:
                 if pygame.sprite.collide_mask(self, enemy):
@@ -784,6 +787,20 @@ class TreeBorder(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.particles = False
         self.rect.x = -1000
+        self.rect.y = -100
+
+
+class RockBorder(pygame.sprite.Sprite):
+    images = load_image("RockWall.png")
+
+    def __init__(self, x=vertical_border):
+        super().__init__(all_sprites)
+        self.add(tree)
+        self.image = RockBorder.images
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.particles = False
+        self.rect.x = x + 500
         self.rect.y = -100
 
 
