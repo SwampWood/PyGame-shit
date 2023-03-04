@@ -23,6 +23,7 @@ system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 vertical_border = 3 * width
+k = 1
 fullscreen = False
 is_paused = False
 login = ''
@@ -59,6 +60,8 @@ def clear_UI():
 def new_game(filename):
     global all_sprites, all_enemies, all_allies, all_platforms, tree
     global system_bars, current_UI, horizontal_borders, player, score, background
+    for i in all_sprites:
+        i.kill()
     all_sprites = pygame.sprite.Group()
     all_enemies = pygame.sprite.Group()
     all_allies = pygame.sprite.Group()
@@ -268,9 +271,13 @@ class Text(pygame.sprite.Sprite):
         super().__init__(current_UI)
         self.text = text
         self.image = pygame.font.Font("data/ComicSansMSPixel.ttf", size_).render(text, True, color)
+        self.size = size_
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+
+    def change_text(self, text):
+        self.__init__(self.rect.x, self.rect.y, self.size, text)
 
 
 class EndScreen:
@@ -291,7 +298,10 @@ class Settings:
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         self.changescreen = Button(270, 200, 50, 500, 'Оконный режим' if fullscreen else 'Полноэкранный режим',
                                    func_=lambda: Settings.fullscreen(self))
-        Button(270, 300, 50, 500, 'Настройки')
+        Text(270, 300, 50, 'Громкость')
+        Button(500, 300, 50, 70, '<-', func_=lambda: Settings.volume_down(self))
+        self.volume_text = Text(600, 300, 50, f'{int(k * 50)}%')
+        Button(700, 300, 50, 70, '->', func_=lambda: Settings.volume_up(self))
         Button(270, 400, 50, 500, 'Назад', func_=lambda: prev())
 
     def fullscreen(self):
@@ -302,6 +312,18 @@ class Settings:
             self.changescreen.change_text('Полноэкранный режим')
         fullscreen = not fullscreen
         pygame.display.toggle_fullscreen()
+
+    def volume_down(self):
+        global sound, k
+        k = max(k - 0.2, 0)
+        sound.set_volume(0.3 * k)
+        self.volume_text.change_text(f'{int(k * 50)}%')
+
+    def volume_up(self):
+        global sound, k
+        k = min(k + 0.2, 2)
+        sound.set_volume(0.3 * k)
+        self.volume_text.change_text(f'{int(k * 50)}%')
 
 
 class Pause:
@@ -795,7 +817,7 @@ class RockPlatform(pygame.sprite.Sprite):
     def update(self, check):
         if not self.particles and pygame.sprite.collide_mask(self, player) and player.current_sprite != self:
             self.particles = True
-            RockPlatform.landing.set_volume(0.4)
+            RockPlatform.landing.set_volume(0.4 * k)
             RockPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
@@ -821,7 +843,7 @@ class FlowerPlatform(pygame.sprite.Sprite):
                 Particle((self.rect.x + self.rect.width // 2, self.rect.y + self.rect.height // 8),
                          random.randint(-10, 10), random.randint(-2, 0))
             self.particles = True
-            FlowerPlatform.landing.set_volume(0.05)
+            FlowerPlatform.landing.set_volume(0.05 * k)
             FlowerPlatform.landing.play(0)
         elif not pygame.sprite.collide_mask(self, player):
             self.particles = False
@@ -922,7 +944,7 @@ class Wasp(Enemy):
         elif self.rect.x <= self.left_pos:
             self.rotation = False
         if abs(self.rect.x - player.rect.x) < 500:
-            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+            self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
         else:
             self.sound.set_volume(0)
 
@@ -964,7 +986,7 @@ class Dragonfly(Enemy):
             elif self.rect.x <= self.pos_args[self.i][0]:
                 self.rotation = True
         if abs(self.rect.x - player.rect.x) < 500:
-            self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+            self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
         else:
             self.sound.set_volume(0)
 
@@ -1014,7 +1036,7 @@ class BossFirstPhase(Enemy):
                 self.v = self.pos_args[self.i][2]
                 self.sleep = 50
             if abs(self.rect.x - player.rect.x) < 500:
-                self.sound.set_volume(0.5 - abs(self.rect.x - player.rect.x) / 1000)
+                self.sound.set_volume((0.5 - abs(self.rect.x - player.rect.x) / 1000) * k)
             else:
                 self.sound.set_volume(0)
 
@@ -1023,11 +1045,11 @@ background = pygame.transform.scale(load_image("background.png"), (width, height
 player = Spider()
 score = Score()
 camera = Camera()
-GetName()
-StartScreen('boss_map.txt')
 sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
 sound.set_volume(0.03)
 sound.play(-1)
+GetName()
+StartScreen('boss_map.txt')
 
 running = True
 count = 0
@@ -1043,19 +1065,19 @@ while running:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not player.webbed and player.web is None:
                 player.web = Web(pygame.mouse.get_pos())
                 web_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'web_soundeffect.mp3'))
-                web_sound.set_volume(0.03)
+                web_sound.set_volume(0.03 * k)
                 web_sound.play(0)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not player.attack_cd:
                 player.attack_cd = 30
                 bite_sound = pygame.mixer.Sound(os.path.join('data', 'music',
                                                              f'bite_soundeffect{random.randint(1, 2)}.mp3'))
-                bite_sound.set_volume(0.2)
+                bite_sound.set_volume(0.2 * k)
                 bite_sound.play(0)
                 Bite()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not player.attack_cd:
                 player.attack_cd = 30
                 poison_sound = pygame.mixer.Sound(os.path.join('data', 'music', 'poison_soundeffect.mp3'))
-                poison_sound.set_volume(0.2)
+                poison_sound.set_volume(0.2 * k)
                 poison_sound.play(0)
                 Poison(event.pos)
             if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
@@ -1071,6 +1093,8 @@ while running:
         camera.update(player)
         for sprite in all_sprites:
             camera.apply(sprite)
+        if vertical_border <= 0:
+            print(True)
         gameplay_background = screen.copy()
 
     else:
