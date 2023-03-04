@@ -59,7 +59,7 @@ def clear_UI():
     current_UI = pygame.sprite.Group()
 
 
-def new_game(filename):
+def new_game(filename='map.txt', firsttime=False):
     global all_sprites, all_enemies, all_allies, all_platforms, tree
     global system_bars, current_UI, horizontal_borders, player, score, background
     for i in all_sprites:
@@ -78,7 +78,8 @@ def new_game(filename):
     Border(0, 700, 6624)
     HealthBar()
     score = Score()
-    Tutorial()
+    if firsttime:
+        Tutorial()
 
 
 class Camera:
@@ -283,19 +284,20 @@ class Text(pygame.sprite.Sprite):
 
 
 class EndScreen:
-    def __init__(self, filename='map.txt'):
+    def __init__(self):
         global background
+        clear_UI()
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
         Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
-        Button(6, 500, 50, 500, 'Новая игра', func_=new_game(filename))
+        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
 class Settings:
     def __init__(self, prev):
-        global background, current_UI
-        current_UI = pygame.sprite.Group()
+        global background
+        clear_UI()
         Text(400, 50, 50, 'Настройки')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         self.changescreen = Button(270, 200, 50, 500, 'Оконный режим' if fullscreen else 'Полноэкранный режим',
@@ -371,7 +373,7 @@ class StartScreen:
         Text(400, 50, 50, 'PyGame-shit')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
-        Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename))
+        Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename, firsttime=True))
         Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
