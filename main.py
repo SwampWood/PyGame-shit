@@ -323,7 +323,7 @@ class EndScreen:
             Text(730, 280 + 50 * i, 40, str(sp[i][1]))
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
-        Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
+        Text(20, 240, 50, 'Вы погибли и не смогли отомстить за своего отца...')
         Button(6, 500, 50, 500, 'Новая игра', func_=lambda: new_game(firsttime=True))
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
