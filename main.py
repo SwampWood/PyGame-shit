@@ -76,6 +76,7 @@ def new_game(filename='map.txt', firsttime=False, tutorial=False):
     create_map(filename)
     Border(0, -2, 24000)
     Border(0, 700, 24000)
+    stalactites = False
 
     if not firsttime:
         health = player.health
