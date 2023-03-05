@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import pygame
+import sqlite3
 from math import atan2, sin, cos, degrees, radians
 
 
@@ -306,7 +307,11 @@ class EndScreen:
 
 class WinScreen:
     def __init__(self):
-        global background
+        global background, sound
+        sound.stop()
+        sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
+        sound.set_volume(0.03 * k)
+        sound.play(-1)
         clear_UI()
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
@@ -1161,6 +1166,10 @@ while running:
             next = True
             stalactites = True
             next_level()
+            sound.stop()
+            sound = pygame.mixer.Sound(os.path.join('data', 'music', 'boss_music.mp3'))
+            sound.set_volume(0.03 * k)
+            sound.play(-1)
             player.health += 1
             player.respawn()
         gameplay_background = screen.copy()
