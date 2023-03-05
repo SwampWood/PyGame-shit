@@ -60,7 +60,7 @@ def clear_UI():
     current_UI = pygame.sprite.Group()
 
 
-def new_game(filename='map.txt', firsttime=False):
+def new_game(filename='map.txt', firsttime=False, tutorial=False):
     global all_sprites, all_enemies, all_allies, all_platforms, tree
     global system_bars, current_UI, horizontal_borders, player, score, background
     for i in all_sprites:
@@ -73,13 +73,22 @@ def new_game(filename='map.txt', firsttime=False):
     system_bars = pygame.sprite.Group()
     horizontal_borders = pygame.sprite.Group()
     clear_UI()
-    player = Spider()
     create_map(filename)
     Border(0, -2, 24000)
     Border(0, 700, 24000)
+
+    if not firsttime:
+        health = player.health
+        score_ = score.score
+    else:
+        health = 10
+        score_ = 1000
+    player = Spider()
+    player.health = health
     HealthBar()
     score = Score()
-    if firsttime:
+    score.score = score_
+    if tutorial:
         Tutorial()
 
 
@@ -296,12 +305,27 @@ class Text(pygame.sprite.Sprite):
 
 class EndScreen:
     def __init__(self):
-        global background
+        global background, sound
+        sound.stop()
+        sound = pygame.mixer.Sound(os.path.join('data', 'music', 'background_music.mp3'))
+        sound.set_volume(0.03 * k)
+        sound.play(-1)
         clear_UI()
+        con = sqlite3.connect("data/scores.db")
+        cur = con.cursor()
+        cur.execute(f"""INSERT INTO high_scores(login, score)
+                                        VALUES ('{login}', {score.score})""")
+        con.commit()
+        sp = cur.execute("""SELECT login, score FROM high_scores
+                ORDER BY score DESC""").fetchall()[:3]
+        print(sp)
+        for i in range(len(sp)):
+            Text(130, 280 + 50 * i, 40, sp[i][0][:20])
+            Text(730, 280 + 50 * i, 40, str(sp[i][1]))
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
         Text(20, 250, 50, 'Вы погибли и не смогли отомстить за своего отца...')
-        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Button(6, 500, 50, 500, 'Новая игра', func_=lambda: new_game(firsttime=True))
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
@@ -313,10 +337,21 @@ class WinScreen:
         sound.set_volume(0.03 * k)
         sound.play(-1)
         clear_UI()
+        con = sqlite3.connect("data/scores.db")
+        cur = con.cursor()
+        cur.execute(f"""INSERT INTO high_scores(login, score)
+                                VALUES ('{login}', {score.score})""")
+        con.commit()
+        sp = cur.execute("""SELECT login, score FROM high_scores
+        ORDER BY score DESC""").fetchall()[:3]
+        print(sp)
+        for i in range(len(sp)):
+            Text(130, 280 + 50 * i, 40, sp[i][0][:20])
+            Text(730, 280 + 50 * i, 40, str(sp[i][1]))
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
-        Text(130, 250, 50, 'Вы наконец-то отомстили за своего отца!')
-        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Text(130, 230, 50, 'Вы наконец-то отомстили за своего отца!')
+        Button(6, 500, 50, 500, 'Новая игра', func_=lambda: new_game(firsttime=True))
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
@@ -399,7 +434,7 @@ class StartScreen:
         Text(400, 50, 50, 'Web-enge')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
-        Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename, firsttime=True))
+        Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename, firsttime=True, tutorial=True))
         Button(270, 300, 50, 500, 'Настройки', func_=lambda: Settings(StartScreen))
         Button(270, 400, 50, 500, 'Выйти из игры', func_=sys.exit)
 
@@ -603,6 +638,8 @@ class Poison(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
         if pygame.sprite.spritecollideany(self, horizontal_borders) or pygame.sprite.spritecollideany(self, tree):
+            self.kill()
+        if self.rect.y > 3000:
             self.kill()
         self.image = pygame.transform.rotate(self.frames[self.cur_frame], self.angle)
         self.mask = pygame.mask.from_surface(self.image)
@@ -1108,6 +1145,7 @@ class BossFirstPhase(Enemy):
 class BossSecondPhase:
     def __init__(self):
         WinScreen()
+
 
 background = pygame.transform.scale(load_image("background.png"), (width, height))
 player = Spider()
