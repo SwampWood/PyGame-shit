@@ -106,7 +106,6 @@ class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
         self.dx = 0
-        self.boss = False
 
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
@@ -124,18 +123,9 @@ class Camera:
     # позиционировать камеру на объекте target
     def update(self, target):
         global vertical_border
-        if not self.boss:
-            self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
-        else:
-            self.dx = -(target.rect.x - width // 6)
+        self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
         player.save_point[0] += self.dx
         vertical_border += self.dx
-
-    def BossCamTurn(self):
-        if self.boss:
-            self.boss = False
-        else:
-            self.boss = True
 
 
 class Border(pygame.sprite.Sprite):
@@ -401,7 +391,7 @@ class StartScreen:
     def __init__(self, filename='map.txt'):
         global background
         clear_UI()
-        Text(400, 50, 50, 'PyGame-shit')
+        Text(400, 50, 50, 'Web-enge')
         Text(290, 100, 50, 'Отомсти за своего отца')
         background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
         Button(270, 200, 50, 500, 'Новая игра', func_=lambda: new_game(filename, firsttime=True))
@@ -1155,8 +1145,6 @@ while running:
                 poison_sound.set_volume(0.2 * k)
                 poison_sound.play(0)
                 Poison(event.pos)
-            if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
-                camera.BossCamTurn()
         if stalactites and not count % 100:
             Stalactite()
         screen.blit(background, (0, 0))
