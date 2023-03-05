@@ -314,6 +314,17 @@ class EndScreen:
         Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
 
 
+class WinScreen:
+    def __init__(self):
+        global background
+        clear_UI()
+        background = pygame.transform.scale(load_image("Death_background.png"), (width, height))
+        Text(496 - 25 * len(str(score.score)), 50, 150, str(score.score))
+        Text(130, 250, 50, 'Вы наконец-то отомстили за своего отца!')
+        Button(6, 500, 50, 500, 'Новая игра', func_=new_game)
+        Button(518, 500, 50, 500, 'Выйти из игры', func_=sys.exit)
+
+
 class Settings:
     def __init__(self, prev):
         global background
@@ -656,7 +667,7 @@ class Spider(pygame.sprite.Sprite):
         self.image = Spider.images_movement_right[self.current]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = 9000
+        self.rect.x = 50
         self.rect.y = 400
         self.save_point = [50, 400]
         self.health = 10
@@ -1059,6 +1070,7 @@ class BossFirstPhase(Enemy):
         self.wait_max = 8
         self.sleep = sleep
         self.i = 0
+        self.dead = False
         self.v = self.pos_args[self.i][2]
         self.sound = BossFirstPhase.buzz
         self.sound_is_played = False
@@ -1090,7 +1102,17 @@ class BossFirstPhase(Enemy):
                 if self.sound_is_played:
                     self.sound.stop()
                 self.sound_is_played = False
+        if self.health <= 0 and not self.dead:
+            self.ToSecondFase()
+            self.dead = True
 
+    def ToSecondFase(self):
+        BossSecondPhase()
+
+
+class BossSecondPhase:
+    def __init__(self):
+        WinScreen()
 
 background = pygame.transform.scale(load_image("background.png"), (width, height))
 player = Spider()
