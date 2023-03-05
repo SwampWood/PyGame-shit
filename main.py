@@ -22,7 +22,7 @@ tree = pygame.sprite.Group()
 system_bars = pygame.sprite.Group()
 current_UI = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
-vertical_border = 4 * width
+vertical_border = 9000
 k = 1
 fullscreen = False
 is_paused = False
@@ -80,6 +80,26 @@ def new_game(filename='map.txt', firsttime=False):
     score = Score()
     if firsttime:
         Tutorial()
+
+
+def next_level():
+    global screen
+    k = 1
+    go_up = True
+    screen2 = pygame.surface.Surface((width, height))
+    screen2.fill((0, 0, 0))
+    screen2.set_alpha(k)
+
+    while k:
+        screen.blit(screen2, (0, 0))
+        if go_up:
+            k += 1
+            if k == 100:
+                go_up = False
+                new_game(filename='boss_map.txt')
+        else:
+            k -= 1
+        pygame.display.flip()
 
 
 class Camera:
@@ -636,7 +656,7 @@ class Spider(pygame.sprite.Sprite):
         self.image = Spider.images_movement_right[self.current]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = 50
+        self.rect.x = 9000
         self.rect.y = 400
         self.save_point = [50, 400]
         self.health = 10
@@ -1082,6 +1102,8 @@ sound.play(-1)
 GetName()
 StartScreen('map.txt')
 
+stalactites = False
+next = False
 running = True
 count = 0
 while running:
@@ -1113,7 +1135,8 @@ while running:
                 Poison(event.pos)
             if keys[pygame.K_b] and event.type == pygame.KEYDOWN:
                 camera.BossCamTurn()
-
+        if stalactites and not count % 100:
+            Stalactite()
         screen.blit(background, (0, 0))
         all_sprites.draw(screen)
         all_allies.draw(screen)
@@ -1124,9 +1147,14 @@ while running:
         camera.update(player)
         for sprite in all_sprites:
             camera.apply(sprite)
-        if vertical_border <= 0:
-            pass
+        if vertical_border <= 0 and not next:
+            next = True
+            stalactites = True
+            next_level()
+            player.health += 1
+            player.respawn()
         gameplay_background = screen.copy()
+        count += 1
 
     else:
         for event in pygame.event.get():
