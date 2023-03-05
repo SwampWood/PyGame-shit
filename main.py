@@ -344,7 +344,6 @@ class WinScreen:
         con.commit()
         sp = cur.execute("""SELECT login, score FROM high_scores
         ORDER BY score DESC""").fetchall()[:3]
-        print(sp)
         for i in range(len(sp)):
             Text(130, 280 + 50 * i, 40, sp[i][0][:20])
             Text(730, 280 + 50 * i, 40, str(sp[i][1]))
