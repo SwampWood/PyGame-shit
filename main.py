@@ -61,8 +61,8 @@ def clear_UI():
 
 
 def new_game(filename='map.txt', firsttime=False, tutorial=False):
-    global all_sprites, all_enemies, all_allies, all_platforms, tree
-    global system_bars, current_UI, horizontal_borders, player, score, background
+    global all_sprites, all_enemies, all_allies, all_platforms, tree, system_bars
+    global current_UI, horizontal_borders, player, score, background, stalactites
     for i in all_sprites:
         i.kill()
     all_sprites = pygame.sprite.Group()
@@ -600,7 +600,6 @@ class Bite(pygame.sprite.Sprite):
                 else:
                     self.rect.x, self.rect.y = player.rect.x - 30, player.rect.y - 10
                 self.wait = 2
-
 
 class Poison(pygame.sprite.Sprite):
     poison = load_image('Poison.png')
