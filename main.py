@@ -383,13 +383,13 @@ class Settings:
     def volume_down(self):
         global sound, k
         k = max(k - 0.2, 0)
-        sound.set_volume(0.3 * k)
+        sound.set_volume(0.03 * k)
         self.volume_text.change_text(f'{int(k * 50)}%')
 
     def volume_up(self):
         global sound, k
         k = min(k + 0.2, 2)
-        sound.set_volume(0.3 * k)
+        sound.set_volume(0.03 * k)
         self.volume_text.change_text(f'{int(k * 50)}%')
 
 
